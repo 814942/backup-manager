@@ -104,7 +104,7 @@ class GamePanel(ctk.CTkFrame):
         # Create a toplevel for adding game
         form = ctk.CTkToplevel(self)
         form.title("Add Game")
-        form.geometry("500x180")
+        form.geometry("500x280")
         form.transient(self)
         form.grab_set()
 
