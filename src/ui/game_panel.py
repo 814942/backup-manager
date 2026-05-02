@@ -80,13 +80,16 @@ class GamePanel(ctk.CTkFrame):
         """Handle game selection."""
         self.selected_game = game
         self._update_buttons()
-        # Update visual selection
+        
+        # Update visual selection with a clear highlight color
+        SELECTED_COLOR = "#00B4D8"  # Electric cyan
         for widget in self.game_list.winfo_children():
             if isinstance(widget, ctk.CTkButton):
                 if widget.cget("text") == game.name:
-                    widget.configure(fg_color=("gray75", "gray25"))
+                    widget.configure(fg_color=SELECTED_COLOR, text_color="black")
                 else:
-                    widget.configure(fg_color="transparent")
+                    widget.configure(fg_color="transparent", text_color=("gray10", "gray90"))
+        
         # Trigger callback
         self.on_select(game)
 
@@ -103,8 +106,8 @@ class GamePanel(ctk.CTkFrame):
 
         # Create a toplevel for adding game
         form = ctk.CTkToplevel(self)
-        form.title("Add Game")
-        form.geometry("500x280")
+        form.title("Add New Game")
+        form.geometry("550x320")
         form.transient(self)
         form.grab_set()
 
@@ -114,92 +117,122 @@ class GamePanel(ctk.CTkFrame):
         ctk.CTkLabel(
             form,
             text="Add New Game",
-            font=ctk.CTkFont(size=14, weight="bold")
+            font=ctk.CTkFont(size=16, weight="bold")
         ).pack(pady=10)
 
-        # Name entry
-        name_frame = ctk.CTkFrame(form)
+        # === Name input ===
+        name_frame = ctk.CTkFrame(form, fg_color="transparent")
         name_frame.pack(pady=5, padx=20, fill="x")
-        ctk.CTkLabel(name_frame, text="Game Name:").pack(side="left", padx=5)
-        name_entry = ctk.CTkEntry(name_frame, width=250)
+        
+        ctk.CTkLabel(name_frame, text="Game Name:", width=120, anchor="w").pack(side="left", padx=5)
+        name_entry = ctk.CTkEntry(name_frame, width=300)
         name_entry.pack(side="left", padx=5)
+        ctk.CTkLabel(
+            name_frame, text="(ej: Project Zomboid)", text_color="gray", font=("Arial", 10)
+        ).pack(side="left", padx=5)
 
-        # Path entries
-        source_path = ctk.StringVar()
-        backup_path = ctk.StringVar()
-
-        source_frame = ctk.CTkFrame(form)
+        # === Source path (Save Folder) ===
+        source_frame = ctk.CTkFrame(form, fg_color="transparent")
         source_frame.pack(pady=5, padx=20, fill="x")
-        ctk.CTkLabel(source_frame, text="Save Folder:").pack(side="left", padx=5)
-        ctk.CTkLabel(source_frame, textvariable=source_path, width=30).pack(side="left", padx=5)
 
-        backup_frame = ctk.CTkFrame(form)
+        ctk.CTkLabel(
+            source_frame, 
+            text="Save Folder:", 
+            width=120, 
+            anchor="w"
+        ).pack(side="left", padx=5)
+        
+        source_path = ctk.StringVar()
+        source_entry = ctk.CTkEntry(source_frame, textvariable=source_path, width=250)
+        source_entry.pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            source_frame,
+            text="Seleccionar",
+            command=lambda: self._browse_folder(source_path),
+            width=90
+        ).pack(side="left", padx=2)
+        
+        ctk.CTkLabel(
+            source_frame, 
+            text="(donde están los saves)", 
+            text_color="gray",
+            font=("Arial", 9)
+        ).pack(side="left", padx=5)
+
+        # === Backup path ===
+        backup_frame = ctk.CTkFrame(form, fg_color="transparent")
         backup_frame.pack(pady=5, padx=20, fill="x")
-        ctk.CTkLabel(backup_frame, text="Backup Folder:").pack(side="left", padx=5)
-        ctk.CTkLabel(backup_frame, textvariable=backup_path, width=30).pack(side="left", padx=5)
 
-        def browse_source():
-            import tkinter.filedialog as fd
-            path = fd.askdirectory(title="Select Game Save Folder")
-            if path:
-                source_path.set(path)
-
-        def browse_backup():
-            import tkinter.filedialog as fd
-            path = fd.askdirectory(title="Select Backup Destination")
-            if path:
-                backup_path.set(path)
-
-        # Button frame
-        btn_frame = ctk.CTkFrame(form)
-        btn_frame.pack(pady=10)
-
+        ctk.CTkLabel(
+            backup_frame, 
+            text="Backup Folder:", 
+            width=120, 
+            anchor="w"
+        ).pack(side="left", padx=5)
+        
+        backup_path = ctk.StringVar()
+        backup_entry = ctk.CTkEntry(backup_frame, textvariable=backup_path, width=250)
+        backup_entry.pack(side="left", padx=5)
+        
         ctk.CTkButton(
-            btn_frame,
-            text="Browse",
-            command=browse_source,
-            width=80
+            backup_frame,
+            text="Seleccionar",
+            command=lambda: self._browse_folder(backup_path),
+            width=90
         ).pack(side="left", padx=2)
+        
+        ctk.CTkLabel(
+            backup_frame, 
+            text="(donde se guardan)", 
+            text_color="gray",
+            font=("Arial", 9)
+        ).pack(side="left", padx=5)
 
-        ctk.CTkButton(
-            btn_frame,
-            text="Browse",
-            command=browse_backup,
-            width=80
-        ).pack(side="left", padx=2)
-
-        def do_add():
-            name = name_entry.get().strip()
-            src = source_path.get().strip()
-            dst = backup_path.get().strip()
-
-            if not name or not src or not dst:
-                # Show error
-                ctk.CTkLabel(
-                    form,
-                    text="All fields required!",
-                    text_color="red"
-                ).pack(pady=5)
-                return
-
-            config = load_config()
-            add_game(config, name, src, dst)
-            form.destroy()
-            self.refresh()
+        # === Action buttons ===
+        btn_frame = ctk.CTkFrame(form, fg_color="transparent")
+        btn_frame.pack(pady=15)
 
         ctk.CTkButton(
             btn_frame,
             text="Add Game",
-            command=do_add,
-            width=100
-        ).pack(side="left", padx=20)
+            command=lambda: self._do_add(form, name_entry, source_path, backup_path),
+            width=120,
+            fg_color="#00B4D8"
+        ).pack(side="left", padx=10)
 
         ctk.CTkButton(
             btn_frame,
             text="Cancel",
             command=form.destroy,
-            width=80
-        ).pack(side="left", padx=2)
+            width=100
+        ).pack(side="left", padx=10)
+
+    def _browse_folder(self, var: ctk.StringVar):
+        """Open folder picker and store result in StringVar."""
+        import tkinter.filedialog as fd
+        path = fd.askdirectory(title="Select Folder")
+        if path:
+            var.set(path)
+
+    def _do_add(self, form, name_entry, source_path, backup_path):
+        """Handle the actual add game operation."""
+        name = name_entry.get().strip()
+        src = source_path.get().strip()
+        dst = backup_path.get().strip()
+
+        if not name or not src or not dst:
+            ctk.CTkLabel(
+                form,
+                text="Todos los campos son requeridos!",
+                text_color="red"
+            ).pack(pady=5)
+            return
+
+        config = load_config()
+        add_game(config, name, src, dst)
+        form.destroy()
+        self.refresh()
 
     def remove_game(self):
         """Remove selected game after confirmation."""

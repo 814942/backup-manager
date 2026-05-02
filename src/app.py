@@ -8,25 +8,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import customtkinter as ctk
 from src.ui.main_window import MainWindow
-from src.core.config import load_config
 
 
 def main():
     """Launch the Backup Manager application."""
     # Configure CustomTkinter appearance
     ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("blue")
+    ctk.set_default_color_theme("cyan")  # More electric blue
     
     # Create and launch the main window
     app = MainWindow()
-    
-    # Check if first run (no games configured)
-    config = load_config()
-    if not config.games:
-        # First run: prompt user to add their first game
-        app.after(100, lambda: app.game_panel.show_first_run_prompt())
-    
-    # Start the application main loop
     app.mainloop()
 
 

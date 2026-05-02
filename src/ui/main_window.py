@@ -15,12 +15,12 @@ class MainWindow(ctk.CTk):
 
         # Window configuration
         self.title("Backup Manager")
-        self.geometry("800x500")
-        self.minsize(600, 400)
+        self.geometry("850x550")
+        self.minsize(650, 450)
 
-        # Set theme
-        ctk.set_appearance_mode("system")
-        ctk.set_default_color_theme("blue")
+        # Set theme - electric cyan
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("cyan")
 
         # Create layout
         self._create_menu_bar()
@@ -31,21 +31,23 @@ class MainWindow(ctk.CTk):
         menu = ctk.CTkFrame(self)
         menu.pack(side="bottom", fill="x", pady=0)
 
-        # Status label
+        # Status label - more visible
         self.status_label = ctk.CTkLabel(
             menu,
-            text="Ready",
+            text="Listo ✓",
             anchor="w",
-            text_color="gray"
+            text_color="#00B4D8",
+            font=ctk.CTkFont(size=11, weight="bold")
         )
         self.status_label.pack(side="left", padx=10, pady=8)
 
         # Settings button
         ctk.CTkButton(
             menu,
-            text="Settings",
+            text="⚙ Settings",
             command=self.open_settings,
-            width=80
+            width=100,
+            fg_color=("gray70", "gray30")
         ).pack(side="right", padx=10, pady=5)
 
     def _create_panels(self):
@@ -61,21 +63,34 @@ class MainWindow(ctk.CTk):
         )
         self.game_panel.pack(side="left", fill="both", padx=(0, 5), pady=0)
 
+        # Right content: header + backup list
+        right_content = ctk.CTkFrame(content)
+        right_content.pack(side="right", fill="both", expand=True, padx=(5, 0), pady=0)
+
+        # Game selection indicator (more visible)
+        self.game_header = ctk.CTkLabel(
+            right_content,
+            text="▶ Seleccioná un juego para ver backups",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#00B4D8"
+        )
+        self.game_header.pack(pady=(5, 0))
+
         # Right panel: Backup list
         self.backup_panel = BackupPanel(
-            content,
+            right_content,
             game=None
         )
-        self.backup_panel.pack(side="right", fill="both", expand=True, padx=(5, 0), pady=0)
+        self.backup_panel.pack(side="top", fill="both", expand=True, padx=0, pady=5)
 
     def on_game_select(self, game: Game):
         """Handle game selection from the game panel."""
         if game:
             self.backup_panel.set_game(game)
-            self.status_label.configure(text=f"Selected: {game.name}")
+            self.game_header.configure(text=f"▶ {game.name} • {game.source_path}")
         else:
             self.backup_panel.set_game(None)
-            self.status_label.configure(text="Ready")
+            self.game_header.configure(text="▶ Seleccioná un juego para ver backups")
 
     def open_settings(self):
         """Open the settings window."""

@@ -230,53 +230,59 @@ class BackupPanel(ctk.CTkFrame):
 
 
 class BackupListItem(ctk.CTkFrame):
-    """Single backup item in the list."""
+    """Single backup item in the list with improved styling."""
 
+    SELECTED_COLOR = "#00B4D8"
+    
     def __init__(
         self,
         parent,
         backup: BackupEntry,
         on_select: callable
     ):
-        super().__init__(parent, fg_color="transparent")
+        super().__init__(
+            parent, 
+            fg_color=("gray85", "gray17"),
+            corner_radius=8
+        )
         self.backup = backup
         self.on_select = on_select
         self.is_selected = False
 
-        # Clickable button
+        # Main clickable area
         self.btn = ctk.CTkButton(
             self,
             text="",
             command=self._on_click,
             fg_color="transparent",
-            border_width=1,
-            height=40,
+            border_width=0,
+            height=50,
             text_color=("gray10", "gray90")
         )
-        self.btn.pack(fill="x")
+        self.btn.pack(fill="x", padx=2, pady=2)
 
-        # Layout: name on left, date/size on right
-        info_frame = ctk.CTkFrame(self, fg_color="transparent")
-        info_frame.place(relx=0.02, rely=0.1, relwidth=0.96, relheight=0.8)
+        # Content inside - backup name + date/size
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.place(relx=0.05, rely=0.15, relwidth=0.9, relheight=0.7)
 
-        # Left side: backup name
+        # Left: backup name
         ctk.CTkLabel(
-            info_frame,
+            content,
             text=backup.name,
             anchor="w",
-            font=ctk.CTkFont(size=12)
+            font=ctk.CTkFont(size=11, weight="bold")
         ).pack(side="left", padx=5)
 
-        # Right side: date and size
+        # Right: date and size
         date_str = backup.created_at.strftime("%Y-%m-%d %H:%M")
         size_str = self._format_size(backup.size_bytes)
-        info_frame.pack_configure()
-
+        
         ctk.CTkLabel(
-            info_frame,
-            text=f"{date_str} | {size_str}",
+            content,
+            text=f"📦 {size_str} • {date_str}",
             anchor="e",
-            text_color="gray"
+            text_color="#00B4D8",
+            font=ctk.CTkFont(size=10)
         ).pack(side="right", padx=5)
 
     def _on_click(self):
@@ -287,9 +293,15 @@ class BackupListItem(ctk.CTkFrame):
         """Update visual state for selection."""
         self.is_selected = selected
         if selected:
-            self.btn.configure(fg_color=("gray75", "gray25"))
+            self.btn.configure(
+                fg_color=self.SELECTED_COLOR,
+                text_color="black"
+            )
         else:
-            self.btn.configure(fg_color="transparent")
+            self.btn.configure(
+                fg_color="transparent",
+                text_color=("gray10", "gray90")
+            )
 
     @staticmethod
     def _format_size(size_bytes: int) -> str:
