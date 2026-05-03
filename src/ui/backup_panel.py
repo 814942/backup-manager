@@ -92,7 +92,7 @@ class BackupPanel(ctk.CTkFrame):
         self.refresh()
 
     def refresh(self):
-        """Reload backups for the selected game."""
+        """Reload backups for the selected game - in background thread."""
         # Clear existing items
         for widget in self.backup_list.winfo_children():
             widget.destroy()
@@ -100,8 +100,32 @@ class BackupPanel(ctk.CTkFrame):
         if not self.game:
             return
 
-        # Load backups
-        self.backups = list_backups(self.game)
+        # Show loading state
+        loading = ctk.CTkLabel(
+            self.backup_list,
+            text="Loading backups...",
+            text_color="gray"
+        )
+        loading.pack(pady=10)
+        
+        # Load in background thread to avoid UI freeze
+        def load_backups():
+            try:
+                backups = list_backups(self.game)
+                self.after(0, lambda: self._display_backups(backups))
+            except Exception as e:
+                self.after(0, lambda: self._display_error(str(e)))
+        
+        thread = threading.Thread(target=load_backups, daemon=True)
+        thread.start()
+
+    def _display_backups(self, backups):
+        """Display the loaded backups."""
+        # Clear loading
+        for widget in self.backup_list.winfo_children():
+            widget.destroy()
+        
+        self.backups = backups
 
         if not self.backups:
             ctk.CTkLabel(
@@ -120,25 +144,42 @@ class BackupPanel(ctk.CTkFrame):
             )
             item.pack(fill="x", padx=5, pady=2)
 
-    def _on_backup_select(self, backup: BackupEntry):
-        """Handle backup selection."""
-        self.selected_backup = backup
+    def _display_error(self, error_msg):
+        """Display error state."""
+        for widget in self.backup_list.winfo_children():
+            widget.destroy()
+        
+        ctk.CTkLabel(
+            self.backup_list,
+            text=f"Error: {error_msg}",
+            text_color="red"
+        ).pack(pady=10)
 
-        # Update visual selection
+    def _on_backup_select(self, backup: BackupEntry):
+        """Handle backup selection - only the clicked one."""
+        # First, deselect all others
         for widget in self.backup_list.winfo_children():
             if isinstance(widget, BackupListItem):
-                widget.set_selected(backup == self.selected_backup)
+                widget.set_selected(False)
+        
+        # Then select only this one
+        self.selected_backup = backup
+        for widget in self.backup_list.winfo_children():
+            if isinstance(widget, BackupListItem) and widget.backup == backup:
+                widget.set_selected(True)
+                break
 
-        # Enable action buttons
-        self.restore_btn.configure(state="normal")
-        self.delete_btn.configure(state="normal")
+        # Enable action buttons only if we have a selection
+        has_selection = backup is not None
+        self.restore_btn.configure(state="normal" if has_selection else "disabled")
+        self.delete_btn.configure(state="normal" if has_selection else "disabled")
 
     def backup(self):
         """Run backup operation in a background thread."""
         if not self.game:
             return
-    
-    # Disable buttons during operation
+        
+        # Disable buttons during operation
         self._set_buttons_enabled(False)
         
         # Show progress dialog
@@ -158,7 +199,7 @@ class BackupPanel(ctk.CTkFrame):
                     progress.close(),
                     self.refresh(),
                     self._set_buttons_enabled(True),
-                    alert(self, "Backup Complete", f"✓ Saved: {entry.name}\n📦 {self._format_size(entry.size_bytes)}")
+                    alert(self, "Backup Complete", f"Saved: {entry.name} ({self._format_size(entry.size_bytes)})")
                 ))
             except Exception as e:
                 self.after(0, lambda: (
@@ -201,7 +242,7 @@ class BackupPanel(ctk.CTkFrame):
                     self.after(0, lambda: (
                         progress.close(),
                         self._set_buttons_enabled(True),
-                        alert(self, "Restore Complete", f"✓ Restored from: {self.selected_backup.name}")
+                        alert(self, "Restore Complete", f"Restored from: {self.selected_backup.name}")
                     ))
                 except Exception as e:
                     self.after(0, lambda: (
@@ -216,7 +257,7 @@ class BackupPanel(ctk.CTkFrame):
         confirm(
             self,
             title="Confirm Restore",
-            message=f"Restore backup '{self.selected_backup.name}'?\n⚠ This will overwrite current save data.",
+            message=f"Restore '{self.selected_backup.name}'? This will overwrite current save data.",
             on_result=handle_confirm
         )
 
@@ -251,6 +292,7 @@ class BackupListItem(ctk.CTkFrame):
     """Single backup item in the list with improved styling."""
 
     SELECTED_COLOR = "#3B8ED0"  # CTk blue
+    HOVER_COLOR = ("gray75", "gray30")
     
     def __init__(
         self,
@@ -260,28 +302,35 @@ class BackupListItem(ctk.CTkFrame):
     ):
         super().__init__(
             parent, 
-            fg_color=("gray85", "gray17"),
+            fg_color="transparent",
             corner_radius=8
         )
         self.backup = backup
         self.on_select = on_select
         self.is_selected = False
 
-        # Main clickable area
-        self.btn = ctk.CTkButton(
+        # Make entire row clickable with full-width hitbox
+        self.hitbox = ctk.CTkFrame(
             self,
-            text="",
-            command=self._on_click,
             fg_color="transparent",
-            border_width=0,
-            height=50,
-            text_color=("gray10", "gray90")
+            cursor="hand2",
+            corner_radius=8
         )
-        self.btn.pack(fill="x", padx=2, pady=2)
+        self.hitbox.pack(fill="x", padx=2, pady=2)
+        
+        # Bind click to entire hitbox
+        self.hitbox.bind("<Button-1>", lambda e: self._on_click())
+        self.hitbox.bind("<Enter>", lambda e: self._on_hover(True))
+        self.hitbox.bind("<Leave>", lambda e: self._on_hover(False))
+        
+        for child in self.hitbox.winfo_children():
+            child.bind("<Button-1>", lambda e: self._on_click())
+            child.bind("<Enter>", lambda e: self._on_hover(True))
+            child.bind("<Leave>", lambda e: self._on_hover(False))
 
-        # Content inside - backup name + date/size
-        content = ctk.CTkFrame(self, fg_color="transparent")
-        content.place(relx=0.05, rely=0.15, relwidth=0.9, relheight=0.7)
+        # Content layout
+        content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
+        content.pack(fill="x", padx=10, pady=8)
 
         # Left: backup name
         ctk.CTkLabel(
@@ -297,7 +346,7 @@ class BackupListItem(ctk.CTkFrame):
         
         ctk.CTkLabel(
             content,
-            text=f"📦 {size_str} • {date_str}",
+            text=f"{size_str} | {date_str}",
             anchor="e",
             text_color="#3B8ED0",  # CTk blue
             font=ctk.CTkFont(size=10)
@@ -307,19 +356,20 @@ class BackupListItem(ctk.CTkFrame):
         """Handle click on the backup item."""
         self.on_select(self.backup)
 
+    def _on_hover(self, entering: bool):
+        """Handle hover effect."""
+        if not self.is_selected and entering:
+            self.hitbox.configure(fg_color=self.HOVER_COLOR)
+        elif not self.is_selected:
+            self.hitbox.configure(fg_color="transparent")
+
     def set_selected(self, selected: bool):
         """Update visual state for selection."""
         self.is_selected = selected
         if selected:
-            self.btn.configure(
-                fg_color=self.SELECTED_COLOR,
-                text_color="black"
-            )
+            self.hitbox.configure(fg_color=self.SELECTED_COLOR)
         else:
-            self.btn.configure(
-                fg_color="transparent",
-                text_color=("gray10", "gray90")
-            )
+            self.hitbox.configure(fg_color="transparent")
 
     @staticmethod
     def _format_size(size_bytes: int) -> str:

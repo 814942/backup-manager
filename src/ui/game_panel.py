@@ -31,10 +31,17 @@ class GamePanel(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self)
         btn_frame.pack(pady=5)
 
+ctk.CTkButton(
+            btn_frame,
+            text="Add Game",
+            command=self.add_game,
+            width=80
+        ).pack(side="left", padx=2)
+
         ctk.CTkButton(
             btn_frame,
-            text="Add",
-            command=self.add_game,
+            text="Edit",
+            command=self.edit_game,
             width=80
         ).pack(side="left", padx=2)
 
@@ -127,9 +134,6 @@ class GamePanel(ctk.CTkFrame):
         ctk.CTkLabel(name_frame, text="Game Name:", width=120, anchor="w").pack(side="left", padx=5)
         name_entry = ctk.CTkEntry(name_frame, width=300)
         name_entry.pack(side="left", padx=5)
-        ctk.CTkLabel(
-            name_frame, text="(ej: Project Zomboid)", text_color="gray", font=("Arial", 10)
-        ).pack(side="left", padx=5)
 
         # === Source path (Save Folder) ===
         source_frame = ctk.CTkFrame(form, fg_color="transparent")
@@ -148,17 +152,10 @@ class GamePanel(ctk.CTkFrame):
         
         ctk.CTkButton(
             source_frame,
-            text="Seleccionar",
+            text="Browse",
             command=lambda: self._browse_folder(source_path),
             width=90
         ).pack(side="left", padx=2)
-        
-        ctk.CTkLabel(
-            source_frame, 
-            text="(donde están los saves)", 
-            text_color="gray",
-            font=("Arial", 9)
-        ).pack(side="left", padx=5)
 
         # === Backup path ===
         backup_frame = ctk.CTkFrame(form, fg_color="transparent")
@@ -177,17 +174,10 @@ class GamePanel(ctk.CTkFrame):
         
         ctk.CTkButton(
             backup_frame,
-            text="Seleccionar",
+            text="Browse",
             command=lambda: self._browse_folder(backup_path),
             width=90
         ).pack(side="left", padx=2)
-        
-        ctk.CTkLabel(
-            backup_frame, 
-            text="(donde se guardan)", 
-            text_color="gray",
-            font=("Arial", 9)
-        ).pack(side="left", padx=5)
 
         # === Action buttons ===
         btn_frame = ctk.CTkFrame(form, fg_color="transparent")

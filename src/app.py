@@ -27,23 +27,23 @@ def show_tutorial(parent):
     
     # Create tutorial dialog
     dialog = ctk.CTkToplevel(parent)
-    dialog.title("Cómo usar Backup Manager")
-    dialog.geometry("500x400")
+    dialog.title("Quick Guide")
+    dialog.geometry("480x380")
     dialog.transient(parent)
     dialog.grab_set()
     
     ctk.CTkLabel(
         dialog,
-        text="📦 Guía Rápida",
+        text="QUICK GUIDE",
         font=ctk.CTkFont(size=18, weight="bold"),
         text_color="#3B8ED0"
     ).pack(pady=15)
     
-    # Steps
+    # Steps in English
     steps = [
-        ("1️⃣ Agregar un Juego", "Clickeá 'Add', completá nombre del juego y seleccioná las carpetas"),
-        ("2️⃣ Crear Backup", "Seleccioná el juego y clickeá 'Backup' para guardar"),
-        ("3️⃣ Restore", "Si algo sale mal, seleccioná un backup y clickeá 'Restore'"),
+        ("1. Add a Game", "Click 'Add', enter name, select save folder and backup location"),
+        ("2. Create Backup", "Select game, click 'Backup' to save current progress"),
+        ("3. Restore", "Select a backup, click 'Restore' if something goes wrong"),
     ]
     
     for title, desc in steps:
@@ -63,20 +63,17 @@ def show_tutorial(parent):
             text=desc,
             text_color="gray",
             anchor="w",
-            wraplength=420
+            wraplength=400
         ).pack(fill="x", padx=15)
     
     # Close button
     ctk.CTkButton(
         dialog,
-        text="Entendido ✓",
+        text="Got it!",
         command=lambda: (seen_file.write_text("1"), dialog.destroy()),
-        width=150,
+        width=120,
         fg_color="#3B8ED0"
     ).pack(pady=20)
-    
-    # Open Add Game after closing tutorial
-    dialog.bind("<Destroy>", lambda e: parent.after(200, lambda: parent.game_panel.add_game()))
 
 
 def main():

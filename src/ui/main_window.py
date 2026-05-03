@@ -34,21 +34,26 @@ class MainWindow(ctk.CTk):
         # Status label - more visible
         self.status_label = ctk.CTkLabel(
             menu,
-            text="Listo ✓",
+            text="Ready",
             anchor="w",
             text_color="#3B8ED0",
             font=ctk.CTkFont(size=11, weight="bold")
         )
         self.status_label.pack(side="left", padx=10, pady=8)
 
-        # Settings button
+        # Help/Tutorial button
         ctk.CTkButton(
             menu,
-            text="⚙ Settings",
-            command=self.open_settings,
-            width=100,
+            text="Help",
+            command=self.show_help,
+            width=80,
             fg_color=("gray70", "gray30")
         ).pack(side="right", padx=10, pady=5)
+
+    def show_help(self):
+        """Show the tutorial/help dialog."""
+        from src.app import show_tutorial
+        show_tutorial(self)
 
     def _create_panels(self):
         """Create left and right panels."""
