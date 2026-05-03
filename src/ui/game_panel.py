@@ -247,6 +247,102 @@ ctk.CTkButton(
             on_result=handle_confirm
         )
 
+    def edit_game(self):
+        """Edit selected game."""
+        if not self.selected_game:
+            return
+        
+        game = self.selected_game
+        
+        # Check if form already exists
+        if hasattr(self, '_edit_form') and self._edit_form.winfo_exists():
+            return
+
+        # Create edit toplevel
+        form = ctk.CTkToplevel(self)
+        form.title("Edit Game")
+        form.geometry("550x320")
+        form.transient(self)
+        form.grab_set()
+
+        self._edit_form = form
+
+        ctk.CTkLabel(
+            form,
+            text="Edit Game",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(pady=10)
+
+        # === Name input ===
+        name_frame = ctk.CTkFrame(form, fg_color="transparent")
+        name_frame.pack(pady=5, padx=20, fill="x")
+        
+        ctk.CTkLabel(name_frame, text="Game Name:", width=120, anchor="w").pack(side="left", padx=5)
+        name_entry = ctk.CTkEntry(name_frame, width=300)
+        name_entry.insert(0, game.name)
+        name_entry.pack(side="left", padx=5)
+
+        # === Source path ===
+        source_frame = ctk.CTkFrame(form, fg_color="transparent")
+        source_frame.pack(pady=5, padx=20, fill="x")
+
+        ctk.CTkLabel(source_frame, text="Save Folder:", width=120, anchor="w").pack(side="left", padx=5)
+        
+        source_path = ctk.StringVar(value=game.source_path)
+        ctk.CTkEntry(source_frame, textvariable=source_path, width=250).pack(side="left", padx=5)
+        
+        ctk.CTkButton(source_frame, text="Browse", command=lambda: self._browse_folder(source_path), width=90).pack(side="left", padx=2)
+
+        # === Backup path ===
+        backup_frame = ctk.CTkFrame(form, fg_color="transparent")
+        backup_frame.pack(pady=5, padx=20, fill="x")
+
+        ctk.CTkLabel(backup_frame, text="Backup Folder:", width=120, anchor="w").pack(side="left", padx=5)
+        
+        backup_path = ctk.StringVar(value=game.backup_path)
+        ctk.CTkEntry(backup_frame, textvariable=backup_path, width=250).pack(side="left", padx=5)
+        
+        ctk.CTkButton(backup_frame, text="Browse", command=lambda: self._browse_folder(backup_path), width=90).pack(side="left", padx=2)
+
+        # === Buttons ===
+        btn_frame = ctk.CTkFrame(form, fg_color="transparent")
+        btn_frame.pack(pady=15)
+
+        ctk.CTkButton(
+            btn_frame,
+            text="Save Changes",
+            command=lambda: self._do_edit(form, game.id, name_entry, source_path, backup_path),
+            width=120,
+            fg_color="#3B8ED0"
+        ).pack(side="left", padx=10)
+
+        ctk.CTkButton(btn_frame, text="Cancel", command=form.destroy, width=100).pack(side="left", padx=10)
+
+    def _do_edit(self, form, game_id, name_entry, source_path, backup_path):
+        """Save edited game."""
+        name = name_entry.get().strip()
+        src = source_path.get().strip()
+        dst = backup_path.get().strip()
+
+        if not name or not src or not dst:
+            ctk.CTkLabel(form, text="All fields are required!", text_color="red").pack(pady=5)
+            return
+
+        config = load_config()
+        
+        # Find and update game
+        for game in config.games:
+            if game.id == game_id:
+                game.name = name
+                game.source_path = src
+                game.backup_path = dst
+                break
+        
+        save_config(config)
+        form.destroy()
+        self.refresh()
+        self.on_select(self.selected_game)  # Re-select to update backup panel
+
     def show_first_run_prompt(self):
         """Show the add game form on first run."""
         self.add_game()
