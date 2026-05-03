@@ -215,7 +215,7 @@ class GamePanel(ctk.CTkFrame):
         if not name or not src or not dst:
             ctk.CTkLabel(
                 form,
-                text="Todos los campos son requeridos!",
+                text="All fields are required!",
                 text_color="red"
             ).pack(pady=5)
             return

@@ -10,17 +10,17 @@ from src.core.utils import timestamp, folder_size
 
 def list_files_for_backup(game: Game) -> list[Path]:
     """
-    List all immediate subfolders in the source_path directory, sorted by last modified (newest first).
-    If source_path is a file, returns a list with only that file.
+    List all files in the source_path directory, sorted by last modified (newest first).
+    Returns only files (not directories).
     """
     source = Path(game.source_path)
     if source.is_file():
         return [source]
     if not source.exists():
         return []
-    # Only list immediate subfolders (not recursive)
-    folders = [f for f in source.iterdir() if f.is_dir()]
-    return sorted(folders, key=lambda f: f.stat().st_mtime, reverse=True)
+    # Only list files in the directory (not subdirectories)
+    files = [f for f in source.iterdir() if f.is_file()]
+    return sorted(files, key=lambda f: f.stat().st_mtime, reverse=True)
 
 def do_backup(
     game: Game,
