@@ -1,4 +1,5 @@
 """Right panel displaying backups for the selected game."""
+import tkinter
 import customtkinter as ctk
 import threading
 from typing import Optional, List
@@ -6,8 +7,8 @@ from datetime import datetime
 
 from src.core.models import Game, BackupEntry
 from src.core.backup import list_backups, do_backup, do_restore, delete_backup, list_files_for_backup
-
 from src.ui.dialogs import confirm, show_progress, alert
+
 
 # --- UTILITIES ---
 def format_size(size_bytes: int) -> str:
@@ -28,21 +29,18 @@ class BackupPanel(ctk.CTkFrame):
         self.selected_backup: Optional[BackupEntry] = None
         self.backups: List[BackupEntry] = []
 
-        # Title
         ctk.CTkLabel(
             self,
             text="Backups",
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(pady=5)
 
-        # Backup list (scrollable)
         self.backup_list = ctk.CTkScrollableFrame(
             self,
             label_text="Available Backups"
         )
         self.backup_list.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Info label
         self.info_label = ctk.CTkLabel(
             self,
             text="Select a game to see backups",
@@ -50,9 +48,7 @@ class BackupPanel(ctk.CTkFrame):
         )
         self.info_label.pack(pady=5)
 
-        # Action buttons frame (hidden by default)
         self.btn_frame = ctk.CTkFrame(self)
-        # No pack yet: will be packed only when a game is selected
 
         self.backup_btn = ctk.CTkButton(
             self.btn_frame,
@@ -80,7 +76,6 @@ class BackupPanel(ctk.CTkFrame):
         )
         self.delete_btn.pack(side="left", padx=2)
 
-        # Set initial state
         if game:
             self.set_game(game)
 
@@ -88,8 +83,6 @@ class BackupPanel(ctk.CTkFrame):
         """Set the current game and refresh the backup list."""
         self.game = game
         self.selected_backup = None
-
-        # Hide action buttons if no game selected
         self.btn_frame.pack_forget()
 
         if game:
@@ -102,95 +95,67 @@ class BackupPanel(ctk.CTkFrame):
 
         self.restore_btn.configure(state="disabled")
         self.delete_btn.configure(state="disabled")
-
         self.refresh()
 
     def refresh(self):
-        """Reload backups for the selected game - in background thread."""
-        # Clear existing items
+        """Reload backups for the selected game in a background thread."""
         for widget in self.backup_list.winfo_children():
             widget.destroy()
 
         if not self.game:
             return
 
-        # Show loading state
-        loading = ctk.CTkLabel(
-            self.backup_list,
-            text="Loading backups...",
-            text_color="gray"
-        )
+        loading = ctk.CTkLabel(self.backup_list, text="Loading backups...", text_color="gray")
         loading.pack(pady=10)
-        
-        # Load in background thread to avoid UI freeze
+
         def load_backups():
             try:
                 backups = list_backups(self.game)
                 self.after(0, lambda: self._display_backups(backups))
             except Exception as e:
                 self.after(0, lambda: self._display_error(str(e)))
-        
-        thread = threading.Thread(target=load_backups, daemon=True)
-        thread.start()
+
+        threading.Thread(target=load_backups, daemon=True).start()
 
     def _display_backups(self, backups):
         """Display the loaded backups."""
-        # Clear loading
         for widget in self.backup_list.winfo_children():
             widget.destroy()
-        
+
         self.backups = backups
 
         if not self.backups:
-            ctk.CTkLabel(
-                self.backup_list,
-                text="No backups yet",
-                text_color="gray"
-            ).pack(pady=10)
+            ctk.CTkLabel(self.backup_list, text="No backups yet", text_color="gray").pack(pady=10)
             return
 
-        # Create items for each backup
         for backup in self.backups:
-            item = BackupListItem(
-                self.backup_list,
-                backup,
-                on_select=self._on_backup_select
-            )
+            item = BackupListItem(self.backup_list, backup, on_select=self._on_backup_select)
             item.pack(fill="x", padx=5, pady=2)
 
     def _display_error(self, error_msg):
         """Display error state."""
         for widget in self.backup_list.winfo_children():
             widget.destroy()
-        
-        ctk.CTkLabel(
-            self.backup_list,
-            text=f"Error: {error_msg}",
-            text_color="red"
-        ).pack(pady=10)
+        ctk.CTkLabel(self.backup_list, text=f"Error: {error_msg}", text_color="red").pack(pady=10)
 
     def _on_backup_select(self, backup: BackupEntry):
-        """Handle backup selection - only the clicked one."""
-        # First, deselect all others
+        """Handle backup selection."""
         for widget in self.backup_list.winfo_children():
             if isinstance(widget, BackupListItem):
                 widget.set_selected(False)
-        
-        # Then select only this one
+
         self.selected_backup = backup
         for widget in self.backup_list.winfo_children():
             if isinstance(widget, BackupListItem) and widget.backup == backup:
                 widget.set_selected(True)
                 break
 
-        # Enable action buttons only if we have a selection
         has_selection = backup is not None
         self.restore_btn.configure(state="normal" if has_selection else "disabled")
         self.delete_btn.configure(state="normal" if has_selection else "disabled")
 
-
     def backup(self):
-        """Prompt user to select a folder to backup, then run backup operation in a background thread."""
+        """Prompt user to select a folder to backup, then run in background thread."""
         if not self.game:
             return
 
@@ -200,7 +165,11 @@ class BackupPanel(ctk.CTkFrame):
         dialog.transient(self)
         dialog.grab_set()
 
-        ctk.CTkLabel(dialog, text="Select the file or folder to backup:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=10)
+        ctk.CTkLabel(
+            dialog,
+            text="Select the file or folder to backup:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(pady=10)
 
         spinner = ctk.CTkLabel(dialog, text="Loading...", text_color="gray")
         spinner.pack(pady=20)
@@ -220,43 +189,48 @@ class BackupPanel(ctk.CTkFrame):
             if not folders:
                 ctk.CTkLabel(dialog, text="No folders found", text_color="gray").pack(pady=10)
                 return
+
             table_frame = ctk.CTkFrame(dialog)
             table_frame.pack(padx=10, pady=10, fill="both", expand=True)
             ctk.CTkLabel(table_frame, text="Nombre", font=ctk.CTkFont(weight="bold"), width=30, anchor="w").grid(row=0, column=0, sticky="w", padx=5)
             ctk.CTkLabel(table_frame, text="Fecha", font=ctk.CTkFont(weight="bold"), width=20, anchor="w").grid(row=0, column=1, sticky="w", padx=5)
+
             for idx, folder in enumerate(folders, start=1):
                 fecha = datetime.fromtimestamp(folder.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-                btn = ctk.CTkButton(table_frame, text=folder.name, width=30, anchor="w", fg_color="transparent", hover_color="#3B8ED0",
-                                    command=lambda f=folder: select_folder(f))
-                btn.grid(row=idx, column=0, sticky="w", padx=5, pady=1)
+                ctk.CTkButton(
+                    table_frame, text=folder.name, width=30, anchor="w",
+                    fg_color="transparent", hover_color="#3B8ED0",
+                    command=lambda f=folder: select_folder(f)
+                ).grid(row=idx, column=0, sticky="w", padx=5, pady=1)
                 ctk.CTkLabel(table_frame, text=fecha, width=20, anchor="w").grid(row=idx, column=1, sticky="w", padx=5, pady=1)
 
         def select_folder(folder_to_backup):
             dialog.destroy()
             self._run_backup_with_file(folder_to_backup)
 
-        thread = threading.Thread(target=load_folders, daemon=True)
-        thread.start()
+        threading.Thread(target=load_folders, daemon=True).start()
 
     def _run_backup_with_file(self, file_to_backup):
         self._set_buttons_enabled(False)
         progress = show_progress(self, "Creating Backup")
         progress.update("[1/2] Preparing...")
-        
-        # Track if dialog is still open
         dialog_open = [True]
 
         def run_backup():
             try:
+                # FIX ISS-06: Replaced bare except: pass with specific TclError catch.
+                # TclError is the only expected exception here (widget destroyed early).
                 def update_progress(msg: str):
+                    if not dialog_open[0]:
+                        return
                     try:
                         self.after(0, lambda m=msg: progress.update(m))
                     except tkinter.TclError:
-                        pass  # Widget destroyed — expected when dialog is closed early
+                        pass  # Dialog was closed early — expected, not an error
 
-                progress.update("[2/2] Copying {file_to_backup.name} ...")
+                progress.update(f"[2/2] Copying {file_to_backup.name} ...")
                 entry = do_backup(self.game, file_to_backup, on_progress=update_progress)
-                
+
                 if dialog_open[0]:
                     dialog_open[0] = False
                     self.after(0, lambda: (
@@ -269,22 +243,22 @@ class BackupPanel(ctk.CTkFrame):
                 err_msg = f"Permission denied: {exc}\n\nMake sure the file is not in use by another program."
                 if dialog_open[0]:
                     dialog_open[0] = False
-                    self.after(0, lambda err_msg=err_msg: (
+                    self.after(0, lambda m=err_msg: (
                         progress.close(),
                         self._set_buttons_enabled(True),
-                        alert(self, "Backup Failed", err_msg)
+                        alert(self, "Backup Failed", m)
                     ))
             except Exception as exc:
                 err_msg = str(exc)
                 if dialog_open[0]:
                     dialog_open[0] = False
-                    self.after(0, lambda err_msg=err_msg: (
+                    self.after(0, lambda m=err_msg: (
                         progress.close(),
                         self._set_buttons_enabled(True),
-                        alert(self, "Backup Failed", err_msg)
+                        alert(self, "Backup Failed", m)
                     ))
-        thread = threading.Thread(target=run_backup, daemon=True)
-        thread.start()
+
+        threading.Thread(target=run_backup, daemon=True).start()
 
     def _set_buttons_enabled(self, enabled: bool):
         """Enable/disable all action buttons."""
@@ -305,18 +279,17 @@ class BackupPanel(ctk.CTkFrame):
             self._set_buttons_enabled(False)
             progress = show_progress(self, "Restoring Backup")
             progress.update("[1/2] Preparing...")
-            
             dialog_open = [True]
 
             def run_restore():
                 try:
+                    # FIX ISS-06: Same TclError fix applied to restore progress callback.
                     def update_progress(msg: str):
                         if not dialog_open[0]:
                             return
                         try:
-                            if hasattr(progress, 'winfo_exists') and progress.winfo_exists():
-                                self.after(0, lambda m=msg: progress.update(m))
-                        except:
+                            self.after(0, lambda m=msg: progress.update(m))
+                        except tkinter.TclError:
                             pass
 
                     progress.update("[2/2] Restoring files...")
@@ -330,16 +303,16 @@ class BackupPanel(ctk.CTkFrame):
                             alert(self, "Restore Complete", f"Restored from: {self.selected_backup.name}")
                         ))
                 except Exception as e:
+                    err_msg = str(e)
                     if dialog_open[0]:
                         dialog_open[0] = False
-                        self.after(0, lambda: (
+                        self.after(0, lambda m=err_msg: (
                             progress.close(),
                             self._set_buttons_enabled(True),
-                            alert(self, "Restore Failed", str(e))
+                            alert(self, "Restore Failed", m)
                         ))
 
-            thread = threading.Thread(target=run_restore, daemon=True)
-            thread.start()
+            threading.Thread(target=run_restore, daemon=True).start()
 
         confirm(
             self,
@@ -356,7 +329,6 @@ class BackupPanel(ctk.CTkFrame):
         def handle_confirm(result: bool):
             if not result:
                 return
-
             try:
                 delete_backup(self.selected_backup)
                 self.selected_backup = None
@@ -376,38 +348,20 @@ class BackupPanel(ctk.CTkFrame):
 
 
 class BackupListItem(ctk.CTkFrame):
-    """Single backup item in the list with improved styling."""
+    """Single backup item in the list."""
 
-    SELECTED_COLOR = "#3B8ED0"  # CTk blue when selected
-    HOVER_COLOR = ("#3B8ED0", "#1f5a8a")  # Same blue as button hover
-    NORMAL_TEXT_COLOR = "#ffffff"  # White text like games
-    SIZE_TEXT_COLOR = "#3B8ED0"  # CTk blue for size
-    
-    def __init__(
-        self,
-        parent,
-        backup: BackupEntry,
-        on_select: callable
-    ):
-        super().__init__(
-            parent, 
-            fg_color="transparent",
-            corner_radius=8
-        )
+    SELECTED_COLOR = "#3B8ED0"
+
+    def __init__(self, parent, backup: BackupEntry, on_select: callable):
+        super().__init__(parent, fg_color="transparent", corner_radius=8)
         self.backup = backup
         self.on_select = on_select
         self.is_selected = False
 
-        # Full-width clickable area with border like games
         self.hitbox = ctk.CTkFrame(
-            self,
-            fg_color="transparent",
-            cursor="hand2",
-            corner_radius=8,
-            border_width=1,
-            border_color=("gray50", "gray30"),
-            width=300,
-            height=40
+            self, fg_color="transparent", cursor="hand2",
+            corner_radius=8, border_width=1,
+            border_color=("gray50", "gray30"), width=300, height=40
         )
         self.hitbox.pack(fill="x", padx=2, pady=2)
         self.hitbox.pack_propagate(False)
@@ -418,14 +372,10 @@ class BackupListItem(ctk.CTkFrame):
         content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
         content.pack(fill="x", padx=10, pady=8)
 
-        # White text like games list
         self.name_label = ctk.CTkLabel(
-            content,
-            text=backup.name,
-            anchor="w",
+            content, text=backup.name, anchor="w",
             font=ctk.CTkFont(size=11, weight="bold"),
-            cursor="hand2",
-            text_color=self.NORMAL_TEXT_COLOR
+            cursor="hand2", text_color="#ffffff"
         )
         self.name_label.pack(side="left", padx=5)
         self.name_label.bind("<Button-1>", lambda e: self._on_click())
@@ -434,15 +384,10 @@ class BackupListItem(ctk.CTkFrame):
 
         date_str = backup.created_at.strftime("%Y-%m-%d %H:%M")
         size_str = format_size(backup.size_bytes)
-        
-        # Blue like other UI elements
+
         self.size_label = ctk.CTkLabel(
-            content,
-            text=f"{size_str} | {date_str}",
-            anchor="e",
-            text_color="#FFFFFF",  # SIEMPRE BLANCO
-            font=ctk.CTkFont(size=10, weight="bold"),
-            cursor="hand2"
+            content, text=f"{size_str} | {date_str}", anchor="e",
+            text_color="#FFFFFF", font=ctk.CTkFont(size=10, weight="bold"), cursor="hand2"
         )
         self.size_label.pack(side="right", padx=5)
         self.size_label.bind("<Button-1>", lambda e: self._on_click())
@@ -450,20 +395,12 @@ class BackupListItem(ctk.CTkFrame):
         self.size_label.bind("<Leave>", lambda e: self._on_hover(False))
 
     def _on_click(self):
-        """Handle click on the backup item."""
         self.on_select(self.backup)
 
     def _on_hover(self, entering: bool):
-        """Hover effect - clean blue fill, not gradient."""
-        if not self.is_selected and entering:
-            self.hitbox.configure(fg_color="#3B8ED0")
-        elif not self.is_selected:
-            self.hitbox.configure(fg_color="transparent")
+        if not self.is_selected:
+            self.hitbox.configure(fg_color="#3B8ED0" if entering else "transparent")
 
     def set_selected(self, selected: bool):
         self.is_selected = selected
-        if selected:
-            self.hitbox.configure(fg_color=self.SELECTED_COLOR)
-        else:
-            self.hitbox.configure(fg_color="transparent")
-
+        self.hitbox.configure(fg_color=self.SELECTED_COLOR if selected else "transparent")
