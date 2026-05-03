@@ -5,8 +5,18 @@ from typing import Optional, List
 from datetime import datetime
 
 from src.core.models import Game, BackupEntry
-from src.core.backup import list_backups, do_backup, do_restore, delete_backup
+from src.core.backup import list_backups, do_backup, do_restore, delete_backup, list_files_for_backup
+
 from src.ui.dialogs import confirm, show_progress, alert
+
+# --- UTILITIES ---
+def format_size(size_bytes: int) -> str:
+    """Format size in human-readable form."""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} TB"
 
 
 class BackupPanel(ctk.CTkFrame):
@@ -40,12 +50,12 @@ class BackupPanel(ctk.CTkFrame):
         )
         self.info_label.pack(pady=5)
 
-        # Action buttons frame
-        btn_frame = ctk.CTkFrame(self)
-        btn_frame.pack(pady=5)
+        # Action buttons frame (hidden by default)
+        self.btn_frame = ctk.CTkFrame(self)
+        # No pack yet: will be packed only when a game is selected
 
         self.backup_btn = ctk.CTkButton(
-            btn_frame,
+            self.btn_frame,
             text="Backup",
             command=self.backup,
             width=80
@@ -53,7 +63,7 @@ class BackupPanel(ctk.CTkFrame):
         self.backup_btn.pack(side="left", padx=2)
 
         self.restore_btn = ctk.CTkButton(
-            btn_frame,
+            self.btn_frame,
             text="Restore",
             command=self.restore,
             width=80,
@@ -62,7 +72,7 @@ class BackupPanel(ctk.CTkFrame):
         self.restore_btn.pack(side="left", padx=2)
 
         self.delete_btn = ctk.CTkButton(
-            btn_frame,
+            self.btn_frame,
             text="Delete",
             command=self.delete,
             width=80,
@@ -79,9 +89,13 @@ class BackupPanel(ctk.CTkFrame):
         self.game = game
         self.selected_backup = None
 
+        # Hide action buttons if no game selected
+        self.btn_frame.pack_forget()
+
         if game:
             self.info_label.configure(text=f"Backups for: {game.name}")
             self.backup_btn.configure(state="normal")
+            self.btn_frame.pack(pady=5)
         else:
             self.info_label.configure(text="Select a game to see backups")
             self.backup_btn.configure(state="disabled")
@@ -174,40 +188,87 @@ class BackupPanel(ctk.CTkFrame):
         self.restore_btn.configure(state="normal" if has_selection else "disabled")
         self.delete_btn.configure(state="normal" if has_selection else "disabled")
 
+
     def backup(self):
-        """Run backup operation in a background thread."""
+        """Prompt user to select a folder to backup, then run backup operation in a background thread."""
         if not self.game:
             return
-        
-        # Disable buttons during operation
+
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Selecciona la carpeta a respaldar")
+        dialog.geometry("600x400")
+        dialog.transient(self)
+        dialog.grab_set()
+
+        ctk.CTkLabel(dialog, text="Selecciona la carpeta que deseas respaldar:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=10)
+
+        spinner = ctk.CTkLabel(dialog, text="Cargando...", text_color="gray")
+        spinner.pack(pady=20)
+
+        def load_folders():
+            try:
+                folders = list_files_for_backup(self.game)
+                self.after(0, lambda: show_folders(folders))
+            except Exception as e:
+                self.after(0, lambda: show_folders([], str(e)))
+
+        def show_folders(folders, error=None):
+            spinner.destroy()
+            if error:
+                ctk.CTkLabel(dialog, text=f"Error: {error}", text_color="red").pack(pady=10)
+                return
+            if not folders:
+                ctk.CTkLabel(dialog, text="No folders found", text_color="gray").pack(pady=10)
+                return
+            table_frame = ctk.CTkFrame(dialog)
+            table_frame.pack(padx=10, pady=10, fill="both", expand=True)
+            ctk.CTkLabel(table_frame, text="Nombre", font=ctk.CTkFont(weight="bold"), width=30, anchor="w").grid(row=0, column=0, sticky="w", padx=5)
+            ctk.CTkLabel(table_frame, text="Fecha", font=ctk.CTkFont(weight="bold"), width=20, anchor="w").grid(row=0, column=1, sticky="w", padx=5)
+            for idx, folder in enumerate(folders, start=1):
+                fecha = datetime.fromtimestamp(folder.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+                btn = ctk.CTkButton(table_frame, text=folder.name, width=30, anchor="w", fg_color="transparent", hover_color="#e0eaff",
+                                    command=lambda f=folder: select_folder(f))
+                btn.grid(row=idx, column=0, sticky="w", padx=5, pady=1)
+                ctk.CTkLabel(table_frame, text=fecha, width=20, anchor="w").grid(row=idx, column=1, sticky="w", padx=5, pady=1)
+
+        def select_folder(folder_to_backup):
+            dialog.destroy()
+            self._run_backup_with_file(folder_to_backup)
+
+        thread = threading.Thread(target=load_folders, daemon=True)
+        thread.start()
+
+    def _run_backup_with_file(self, file_to_backup):
         self._set_buttons_enabled(False)
-        
-        # Show progress dialog
         progress = show_progress(self, "Creating Backup")
         progress.update("[1/2] Preparing...")
-        
+
         def run_backup():
             try:
                 def update_progress(msg: str):
-                    # Simple string callback
                     self.after(0, lambda m=msg: progress.update(m))
-                
-                progress.update("[2/2] Copying files...")
-                entry = do_backup(self.game, on_progress=update_progress)
-                
+                progress.update(f"[2/2] Copying {file_to_backup.name} ...")
+                entry = do_backup(self.game, file_to_backup, on_progress=update_progress)
                 self.after(0, lambda: (
                     progress.close(),
                     self.refresh(),
                     self._set_buttons_enabled(True),
-                    alert(self, "Backup Complete", f"Saved: {entry.name} ({self._format_size(entry.size_bytes)})")
+                    alert(self, "Backup Complete", f"Saved: {entry.name} ({format_size(entry.size_bytes)})")
                 ))
-            except Exception as e:
-                self.after(0, lambda: (
+            except PermissionError as exc:
+                err_msg = f"Permiso denegado: {exc}\n\nVerifica que tienes permisos de lectura sobre la carpeta o archivo seleccionado y que no está siendo usado por otro programa."
+                self.after(0, lambda err_msg=err_msg: (
                     progress.close(),
                     self._set_buttons_enabled(True),
-                    alert(self, "Backup Failed", str(e))
+                    alert(self, "Backup Failed", err_msg)
                 ))
-        
+            except Exception as exc:
+                err_msg = str(exc)
+                self.after(0, lambda err_msg=err_msg: (
+                    progress.close(),
+                    self._set_buttons_enabled(True),
+                    alert(self, "Backup Failed", err_msg)
+                ))
         thread = threading.Thread(target=run_backup, daemon=True)
         thread.start()
 
@@ -291,8 +352,11 @@ class BackupPanel(ctk.CTkFrame):
 class BackupListItem(ctk.CTkFrame):
     """Single backup item in the list with improved styling."""
 
-    SELECTED_COLOR = "#49F0F0"  # CTk blue
-    HOVER_COLOR = ("gray75", "gray30")
+    SELECTED_COLOR = "transparent"  # No fondo azul al seleccionar
+    HOVER_COLOR = ("#e0eaff", "#e0eaff")  # Hover azul claro, igual que la tabla
+    HOVER_TEXT_COLOR = "#222222"  # Texto oscuro en hover
+    NORMAL_TEXT_COLOR = "#222222"
+    SIZE_TEXT_COLOR = "#49F0F0"
     
     def __init__(
         self,
@@ -309,8 +373,6 @@ class BackupListItem(ctk.CTkFrame):
         self.on_select = on_select
         self.is_selected = False
 
-        # Make entire row clickable with full-width hitbox
-        # Use CTkFrame with proper size that expands
         self.hitbox = ctk.CTkFrame(
             self,
             fg_color="transparent",
@@ -320,71 +382,60 @@ class BackupListItem(ctk.CTkFrame):
             height=40
         )
         self.hitbox.pack(fill="x", padx=2, pady=2)
-        self.hitbox.pack_propagate(False)  # Don't shrink to content
-        
-        # Bind click directly to the hitbox frame
+        self.hitbox.pack_propagate(False)
         self.hitbox.bind("<Button-1>", lambda e: self._on_click())
         self.hitbox.bind("<Enter>", lambda e: self._on_hover(True))
         self.hitbox.bind("<Leave>", lambda e: self._on_hover(False))
 
-        # Content layout - placed inside hitbox
         content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
         content.pack(fill="x", padx=10, pady=8)
 
-        # Left: backup name - also clickable
-        name_label = ctk.CTkLabel(
+        self.name_label = ctk.CTkLabel(
             content,
             text=backup.name,
             anchor="w",
             font=ctk.CTkFont(size=11, weight="bold"),
-            cursor="hand2"
+            cursor="hand2",
+            text_color=self.NORMAL_TEXT_COLOR
         )
-        name_label.pack(side="left", padx=5)
-        name_label.bind("<Button-1>", lambda e: self._on_click())
-        name_label.bind("<Enter>", lambda e: self._on_hover(True))
-        name_label.bind("<Leave>", lambda e: self._on_hover(False))
+        self.name_label.pack(side="left", padx=5)
+        self.name_label.bind("<Button-1>", lambda e: self._on_click())
+        self.name_label.bind("<Enter>", lambda e: self._on_hover(True))
+        self.name_label.bind("<Leave>", lambda e: self._on_hover(False))
 
-        # Right: date and size - also clickable
         date_str = backup.created_at.strftime("%Y-%m-%d %H:%M")
-        size_str = self._format_size(backup.size_bytes)
-        
-        size_label = ctk.CTkLabel(
+        size_str = format_size(backup.size_bytes)
+        self.size_label = ctk.CTkLabel(
             content,
             text=f"{size_str} | {date_str}",
             anchor="e",
-            text_color="#49F0F0",
+            text_color=self.SIZE_TEXT_COLOR,
             font=ctk.CTkFont(size=10),
             cursor="hand2"
         )
-        size_label.pack(side="right", padx=5)
-        size_label.bind("<Button-1>", lambda e: self._on_click())
-        size_label.bind("<Enter>", lambda e: self._on_hover(True))
-        size_label.bind("<Leave>", lambda e: self._on_hover(False))
+        self.size_label.pack(side="right", padx=5)
+        self.size_label.bind("<Button-1>", lambda e: self._on_click())
+        self.size_label.bind("<Enter>", lambda e: self._on_hover(True))
+        self.size_label.bind("<Leave>", lambda e: self._on_hover(False))
 
     def _on_click(self):
         """Handle click on the backup item."""
         self.on_select(self.backup)
 
     def _on_hover(self, entering: bool):
-        """Handle hover effect."""
         if not self.is_selected and entering:
             self.hitbox.configure(fg_color=self.HOVER_COLOR)
+            self.name_label.configure(text_color=self.HOVER_TEXT_COLOR)
+            self.size_label.configure(text_color=self.HOVER_TEXT_COLOR)
         elif not self.is_selected:
             self.hitbox.configure(fg_color="transparent")
+            self.name_label.configure(text_color=self.NORMAL_TEXT_COLOR)
+            self.size_label.configure(text_color=self.SIZE_TEXT_COLOR)
 
     def set_selected(self, selected: bool):
-        """Update visual state for selection."""
         self.is_selected = selected
         if selected:
             self.hitbox.configure(fg_color=self.SELECTED_COLOR)
         else:
             self.hitbox.configure(fg_color="transparent")
 
-    @staticmethod
-    def _format_size(size_bytes: int) -> str:
-        """Format size in human-readable form."""
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size_bytes < 1024:
-                return f"{size_bytes:.1f} {unit}"
-            size_bytes /= 1024
-        return f"{size_bytes:.1f} TB"

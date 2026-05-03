@@ -6,66 +6,44 @@ from src.core.models import Game, BackupEntry
 from src.core.utils import timestamp, folder_size
 
 
+
+def list_files_for_backup(game: Game) -> list[Path]:
+    """
+    List all immediate subfolders in the source_path directory, sorted by last modified (newest first).
+    If source_path is a file, returns a list with only that file.
+    """
+    source = Path(game.source_path)
+    if source.is_file():
+        return [source]
+    if not source.exists():
+        return []
+    # Only list immediate subfolders (not recursive)
+    folders = [f for f in source.iterdir() if f.is_dir()]
+    return sorted(folders, key=lambda f: f.stat().st_mtime, reverse=True)
+
 def do_backup(
     game: Game,
+    file_to_backup: Path,
     on_progress: Callable[[str], None] | None = None
 ) -> BackupEntry:
-    """Backup ONE single file (not entire folder) - the actual save file.
-    
-    This is much faster as it only backups the critical save file,
-    not temp files, cache, logs, etc.
+    """
+    Backup a specific file from the game's source_path.
     """
     ts = timestamp()
     folder_name = f"{game.name}-{ts}"
     dest = Path(game.backup_path) / folder_name
-    
-    # Ensure backup dir exists
     Path(game.backup_path).mkdir(parents=True, exist_ok=True)
-    
-    source = Path(game.source_path)
-    
+    dest.mkdir(parents=True, exist_ok=True)
+
     if on_progress:
-        on_progress("Preparing backup...")
-    
-    # Check if source is a file or directory
-    if source.is_file():
-        # Single file backup - just copy it
-        dest.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, dest / source.name)
-        size = source.stat().st_size
-    else:
-        # Directory - find the actual save file (not all files!)
-        # Look for common save file patterns
-        save_file = None
-        for pattern in ["*.sav", "*.save", "*.bak", "*.dat"]:
-            matches = list(source.glob(pattern))
-            if matches:
-                save_file = matches[0]
-                break
-        
-        # If no pattern match, try first file in directory
-        if not save_file and source.exists():
-            files = [f for f in source.iterdir() if f.is_file()]
-            if files:
-                # Pick the largest file (likely the save)
-                save_file = max(files, key=lambda f: f.stat().st_size)
-        
-        if save_file:
-            dest.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(save_file, dest / save_file.name)
-            size = save_file.stat().st_size
-            if on_progress:
-                on_progress(f"Backed up: {save_file.name}")
-        else:
-            # No save file found - create empty backup
-            dest.mkdir(parents=True, exist_ok=True)
-            size = 0
-            if on_progress:
-                on_progress("No save file found - created empty backup")
-    
+        on_progress(f"Backing up: {file_to_backup.name}")
+
+    shutil.copy2(file_to_backup, dest / file_to_backup.name)
+    size = file_to_backup.stat().st_size
+
     if on_progress:
         on_progress("Complete!")
-    
+
     return BackupEntry(
         name=folder_name,
         path=str(dest),
