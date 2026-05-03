@@ -226,7 +226,7 @@ class BackupPanel(ctk.CTkFrame):
             ctk.CTkLabel(table_frame, text="Fecha", font=ctk.CTkFont(weight="bold"), width=20, anchor="w").grid(row=0, column=1, sticky="w", padx=5)
             for idx, folder in enumerate(folders, start=1):
                 fecha = datetime.fromtimestamp(folder.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
-                btn = ctk.CTkButton(table_frame, text=folder.name, width=30, anchor="w", fg_color="transparent", hover_color="#e0eaff",
+                btn = ctk.CTkButton(table_frame, text=folder.name, width=30, anchor="w", fg_color="transparent", hover_color="#3B8ED0",
                                     command=lambda f=folder: select_folder(f))
                 btn.grid(row=idx, column=0, sticky="w", padx=5, pady=1)
                 ctk.CTkLabel(table_frame, text=fecha, width=20, anchor="w").grid(row=idx, column=1, sticky="w", padx=5, pady=1)
@@ -242,33 +242,51 @@ class BackupPanel(ctk.CTkFrame):
         self._set_buttons_enabled(False)
         progress = show_progress(self, "Creating Backup")
         progress.update("[1/2] Preparing...")
+        
+        # Track if dialog is still open
+        dialog_open = [True]
 
         def run_backup():
             try:
                 def update_progress(msg: str):
-                    self.after(0, lambda m=msg: progress.update(m))
+                    # Check if dialog is still open before updating
+                    if not dialog_open[0]:
+                        return
+                    try:
+                        if hasattr(progress, 'winfo_exists') and progress.winfo_exists():
+                            self.after(0, lambda m=msg: progress.update(m))
+                    except:
+                        pass
+                
                 progress.update(f"[2/2] Copying {file_to_backup.name} ...")
                 entry = do_backup(self.game, file_to_backup, on_progress=update_progress)
-                self.after(0, lambda: (
-                    progress.close(),
-                    self.refresh(),
-                    self._set_buttons_enabled(True),
-                    alert(self, "Backup Complete", f"Saved: {entry.name} ({format_size(entry.size_bytes)})")
-                ))
+                
+                if dialog_open[0]:
+                    self.after(0, lambda: (
+                        progress.close(),
+                        dialog_open[0] = False,
+                        self.refresh(),
+                        self._set_buttons_enabled(True),
+                        alert(self, "Backup Complete", f"Saved: {entry.name} ({format_size(entry.size_bytes)})")
+                    ))
             except PermissionError as exc:
                 err_msg = f"Permission denied: {exc}\n\nMake sure the file is not in use by another program."
-                self.after(0, lambda err_msg=err_msg: (
-                    progress.close(),
-                    self._set_buttons_enabled(True),
-                    alert(self, "Backup Failed", err_msg)
-                ))
+                if dialog_open[0]:
+                    self.after(0, lambda err_msg=err_msg: (
+                        progress.close(),
+                        dialog_open[0] = False,
+                        self._set_buttons_enabled(True),
+                        alert(self, "Backup Failed", err_msg)
+                    ))
             except Exception as exc:
                 err_msg = str(exc)
-                self.after(0, lambda err_msg=err_msg: (
-                    progress.close(),
-                    self._set_buttons_enabled(True),
-                    alert(self, "Backup Failed", err_msg)
-                ))
+                if dialog_open[0]:
+                    self.after(0, lambda err_msg=err_msg: (
+                        progress.close(),
+                        dialog_open[0] = False,
+                        self._set_buttons_enabled(True),
+                        alert(self, "Backup Failed", err_msg)
+                    ))
         thread = threading.Thread(target=run_backup, daemon=True)
         thread.start()
 
@@ -291,26 +309,38 @@ class BackupPanel(ctk.CTkFrame):
             self._set_buttons_enabled(False)
             progress = show_progress(self, "Restoring Backup")
             progress.update("[1/2] Preparing...")
+            
+            dialog_open = [True]
 
             def run_restore():
                 try:
                     def update_progress(msg: str):
-                        self.after(0, lambda m=msg: progress.update(m))
+                        if not dialog_open[0]:
+                            return
+                        try:
+                            if hasattr(progress, 'winfo_exists') and progress.winfo_exists():
+                                self.after(0, lambda m=msg: progress.update(m))
+                        except:
+                            pass
 
                     progress.update("[2/2] Restoring files...")
                     do_restore(self.game, self.selected_backup, on_progress=update_progress)
 
-                    self.after(0, lambda: (
-                        progress.close(),
-                        self._set_buttons_enabled(True),
-                        alert(self, "Restore Complete", f"Restored from: {self.selected_backup.name}")
-                    ))
+                    if dialog_open[0]:
+                        self.after(0, lambda: (
+                            progress.close(),
+                            dialog_open[0] = False,
+                            self._set_buttons_enabled(True),
+                            alert(self, "Restore Complete", f"Restored from: {self.selected_backup.name}")
+                        ))
                 except Exception as e:
-                    self.after(0, lambda: (
-                        progress.close(),
-                        self._set_buttons_enabled(True),
-                        alert(self, "Restore Failed", str(e))
-                    ))
+                    if dialog_open[0]:
+                        self.after(0, lambda: (
+                            progress.close(),
+                            dialog_open[0] = False,
+                            self._set_buttons_enabled(True),
+                            alert(self, "Restore Failed", str(e))
+                        ))
 
             thread = threading.Thread(target=run_restore, daemon=True)
             thread.start()
