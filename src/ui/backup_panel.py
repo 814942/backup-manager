@@ -256,7 +256,7 @@ class BackupPanel(ctk.CTkFrame):
                     alert(self, "Backup Complete", f"Saved: {entry.name} ({format_size(entry.size_bytes)})")
                 ))
             except PermissionError as exc:
-                err_msg = f"Permiso denegado: {exc}\n\nVerifica que tienes permisos de lectura sobre la carpeta o archivo seleccionado y que no está siendo usado por otro programa."
+                err_msg = f"Permission denied: {exc}\n\nMake sure the file is not in use by another program."
                 self.after(0, lambda err_msg=err_msg: (
                     progress.close(),
                     self._set_buttons_enabled(True),
@@ -428,21 +428,11 @@ class BackupListItem(ctk.CTkFrame):
         self.on_select(self.backup)
 
     def _on_hover(self, entering: bool):
-        # Hover only when not selected
-        if not self.is_selected:
-            if entering:
-                self.hitbox.configure(fg_color=self.HOVER_COLOR)
-            else:
-                self.hitbox.configure(fg_color="transparent")
-
-    def set_selected(self, selected: bool):
-        self.is_selected = selected
-        if selected:
-            self.hitbox.configure(fg_color=self.SELECTED_COLOR)
-        else:
+        """Hover effect - clean blue fill, not gradient."""
+        if not self.is_selected and entering:
+            self.hitbox.configure(fg_color="#3B8ED0")
+        elif not self.is_selected:
             self.hitbox.configure(fg_color="transparent")
-            self.name_label.configure(text_color=self.NORMAL_TEXT_COLOR)
-            self.size_label.configure(text_color=self.SIZE_TEXT_COLOR)
 
     def set_selected(self, selected: bool):
         self.is_selected = selected

@@ -94,7 +94,7 @@ class GamePanel(ctk.CTkFrame):
         for widget in self.game_list.winfo_children():
             if isinstance(widget, ctk.CTkButton):
                 if widget.cget("text") == game.name:
-                    widget.configure(fg_color=SELECTED_COLOR, text_color="black")
+                    widget.configure(fg_color=SELECTED_COLOR, text_color="white")
                 else:
                     widget.configure(fg_color="transparent", text_color=("gray10", "gray90"))
         

@@ -1,4 +1,5 @@
 import shutil
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Callable
@@ -28,6 +29,7 @@ def do_backup(
 ) -> BackupEntry:
     """
     Backup a specific file from the game's source_path.
+    Uses copy with error handling for locked files.
     """
     ts = timestamp()
     folder_name = f"{game.name}-{ts}"
@@ -38,7 +40,25 @@ def do_backup(
     if on_progress:
         on_progress(f"Backing up: {file_to_backup.name}")
 
-    shutil.copy2(file_to_backup, dest / file_to_backup.name)
+    try:
+        # Try copy2 first (preserves metadata)
+        shutil.copy2(file_to_backup, dest / file_to_backup.name)
+    except PermissionError:
+        # If PermissionError, try regular copy (less strict)
+        try:
+            shutil.copy(file_to_backup, dest / file_to_backup.name)
+        except Exception as e:
+            raise PermissionError(f"Cannot access file: {file_to_backup.name}. It may be in use by another program.") from e
+    except Exception as e:
+        # Try with lower-level copy as last resort
+        import copy
+        try:
+            with open(file_to_backup, 'rb') as src:
+                with open(dest / file_to_backup.name, 'wb') as dst:
+                    dst.write(src.read())
+        except Exception as e2:
+            raise PermissionError(f"Cannot copy {file_to_backup.name}: {e2}") from e2
+    
     size = file_to_backup.stat().st_size
 
     if on_progress:
@@ -78,14 +98,14 @@ def do_restore(
                 save_file = files[0]
     
     if save_file and save_file.exists():
-        # Restore single file
-        source.parent.mkdir(parents=True, exist_ok=True)
-        
-        # If source is a file, restore to same location
+        # Restore single file - handle both file and folder cases
         if source.is_file():
+            # Source is a file - restore directly
+            source.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(save_file, source)
         else:
-            # It's a directory, restore to directory with same name
+            # Source is a folder - restore into it
+            source.mkdir(parents=True, exist_ok=True)
             dest_file = source / save_file.name
             shutil.copy2(save_file, dest_file)
         
