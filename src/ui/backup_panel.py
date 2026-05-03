@@ -195,14 +195,14 @@ class BackupPanel(ctk.CTkFrame):
             return
 
         dialog = ctk.CTkToplevel(self)
-        dialog.title("Selecciona la carpeta a respaldar")
+        dialog.title("Select file to backup")
         dialog.geometry("600x400")
         dialog.transient(self)
         dialog.grab_set()
 
-        ctk.CTkLabel(dialog, text="Selecciona la carpeta que deseas respaldar:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=10)
+        ctk.CTkLabel(dialog, text="Select the file or folder to backup:", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=10)
 
-        spinner = ctk.CTkLabel(dialog, text="Cargando...", text_color="gray")
+        spinner = ctk.CTkLabel(dialog, text="Loading...", text_color="gray")
         spinner.pack(pady=20)
 
         def load_folders():
@@ -352,11 +352,10 @@ class BackupPanel(ctk.CTkFrame):
 class BackupListItem(ctk.CTkFrame):
     """Single backup item in the list with improved styling."""
 
-    SELECTED_COLOR = "transparent"  # No fondo azul al seleccionar
-    HOVER_COLOR = ("#e0eaff", "#e0eaff")  # Hover azul claro, igual que la tabla
-    HOVER_TEXT_COLOR = "#222222"  # Texto oscuro en hover
-    NORMAL_TEXT_COLOR = "#222222"
-    SIZE_TEXT_COLOR = "#49F0F0"
+    SELECTED_COLOR = "#3B8ED0"  # CTk blue when selected
+    HOVER_COLOR = ("#3B8ED0", "#1f5a8a")  # Same blue as button hover
+    NORMAL_TEXT_COLOR = "#ffffff"  # White text like games
+    SIZE_TEXT_COLOR = "#3B8ED0"  # CTk blue for size
     
     def __init__(
         self,
@@ -373,11 +372,14 @@ class BackupListItem(ctk.CTkFrame):
         self.on_select = on_select
         self.is_selected = False
 
+        # Full-width clickable area with border like games
         self.hitbox = ctk.CTkFrame(
             self,
             fg_color="transparent",
             cursor="hand2",
             corner_radius=8,
+            border_width=1,
+            border_color=("gray50", "gray30"),
             width=300,
             height=40
         )
@@ -390,6 +392,7 @@ class BackupListItem(ctk.CTkFrame):
         content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
         content.pack(fill="x", padx=10, pady=8)
 
+        # White text like games list
         self.name_label = ctk.CTkLabel(
             content,
             text=backup.name,
@@ -405,12 +408,14 @@ class BackupListItem(ctk.CTkFrame):
 
         date_str = backup.created_at.strftime("%Y-%m-%d %H:%M")
         size_str = format_size(backup.size_bytes)
+        
+        # Blue like other UI elements
         self.size_label = ctk.CTkLabel(
             content,
             text=f"{size_str} | {date_str}",
             anchor="e",
             text_color=self.SIZE_TEXT_COLOR,
-            font=ctk.CTkFont(size=10),
+            font=ctk.CTkFont(size=10, weight="bold"),
             cursor="hand2"
         )
         self.size_label.pack(side="right", padx=5)
@@ -423,11 +428,18 @@ class BackupListItem(ctk.CTkFrame):
         self.on_select(self.backup)
 
     def _on_hover(self, entering: bool):
-        if not self.is_selected and entering:
-            self.hitbox.configure(fg_color=self.HOVER_COLOR)
-            self.name_label.configure(text_color=self.HOVER_TEXT_COLOR)
-            self.size_label.configure(text_color=self.HOVER_TEXT_COLOR)
-        elif not self.is_selected:
+        # Hover only when not selected
+        if not self.is_selected:
+            if entering:
+                self.hitbox.configure(fg_color=self.HOVER_COLOR)
+            else:
+                self.hitbox.configure(fg_color="transparent")
+
+    def set_selected(self, selected: bool):
+        self.is_selected = selected
+        if selected:
+            self.hitbox.configure(fg_color=self.SELECTED_COLOR)
+        else:
             self.hitbox.configure(fg_color="transparent")
             self.name_label.configure(text_color=self.NORMAL_TEXT_COLOR)
             self.size_label.configure(text_color=self.SIZE_TEXT_COLOR)

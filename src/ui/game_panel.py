@@ -90,7 +90,7 @@ class GamePanel(ctk.CTkFrame):
         self._update_buttons()
         
         # Update visual selection with a clear highlight color
-        SELECTED_COLOR = "#49F0F0"  # CTk blue
+        SELECTED_COLOR = "#3B8ED0"  # CTk blue
         for widget in self.game_list.winfo_children():
             if isinstance(widget, ctk.CTkButton):
                 if widget.cget("text") == game.name:
@@ -189,7 +189,7 @@ class GamePanel(ctk.CTkFrame):
             text="Add Game",
             command=lambda: self._do_add(form, name_entry, source_path, backup_path),
             width=120,
-            fg_color="#49F0F0"  # CTk blue
+            fg_color="#3B8ED0"  # CTk blue
         ).pack(side="left", padx=10)
 
         ctk.CTkButton(
@@ -314,7 +314,7 @@ class GamePanel(ctk.CTkFrame):
             text="Save Changes",
             command=lambda: self._do_edit(form, game.id, name_entry, source_path, backup_path),
             width=120,
-            fg_color="#49F0F0"
+            fg_color="#3B8ED0"
         ).pack(side="left", padx=10)
 
         ctk.CTkButton(btn_frame, text="Cancel", command=form.destroy, width=100).pack(side="left", padx=10)

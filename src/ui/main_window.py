@@ -36,7 +36,7 @@ class MainWindow(ctk.CTk):
             menu,
             text="Ready",
             anchor="w",
-            text_color="#49F0F0",
+            text_color="#3B8ED0",
             font=ctk.CTkFont(size=11, weight="bold")
         )
         self.status_label.pack(side="left", padx=10, pady=8)
@@ -75,9 +75,9 @@ class MainWindow(ctk.CTk):
         # Game selection indicator (more visible)
         self.game_header = ctk.CTkLabel(
             right_content,
-            text="▶ Seleccioná un juego para ver backups",
+            text="▶ Select a game to see backups",
             font=ctk.CTkFont(size=13, weight="bold"),
-            text_color="#49F0F0"
+            text_color="#3B8ED0"
         )
         self.game_header.pack(pady=(5, 0))
 
