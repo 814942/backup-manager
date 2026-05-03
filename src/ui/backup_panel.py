@@ -137,31 +137,45 @@ class BackupPanel(ctk.CTkFrame):
         """Run backup operation in a background thread."""
         if not self.game:
             return
-
+    
+    # Disable buttons during operation
+        self._set_buttons_enabled(False)
+        
         # Show progress dialog
-        progress = show_progress(self, "Backup in Progress")
-        progress.update("Starting backup...")
-
+        progress = show_progress(self, "Creating Backup")
+        progress.update("[1/2] Preparing...")
+        
         def run_backup():
             try:
                 def update_progress(msg: str):
-                    self.after(0, lambda: progress.update(msg))
-
+                    # Simple string callback
+                    self.after(0, lambda m=msg: progress.update(m))
+                
+                progress.update("[2/2] Copying files...")
                 entry = do_backup(self.game, on_progress=update_progress)
-
+                
                 self.after(0, lambda: (
                     progress.close(),
                     self.refresh(),
-                    alert(self, "Backup Complete", f"Backup created: {entry.name}")
+                    self._set_buttons_enabled(True),
+                    alert(self, "Backup Complete", f"✓ Saved: {entry.name}\n📦 {self._format_size(entry.size_bytes)}")
                 ))
             except Exception as e:
                 self.after(0, lambda: (
                     progress.close(),
+                    self._set_buttons_enabled(True),
                     alert(self, "Backup Failed", str(e))
                 ))
-
+        
         thread = threading.Thread(target=run_backup, daemon=True)
         thread.start()
+
+    def _set_buttons_enabled(self, enabled: bool):
+        """Enable/disable all action buttons."""
+        state = "normal" if enabled else "disabled"
+        self.backup_btn.configure(state=state)
+        self.restore_btn.configure(state=state)
+        self.delete_btn.configure(state=state)
 
     def restore(self):
         """Show confirmation dialog, then restore in background."""
@@ -172,23 +186,27 @@ class BackupPanel(ctk.CTkFrame):
             if not result:
                 return
 
-            progress = show_progress(self, "Restore in Progress")
-            progress.update("Restoring backup...")
+            self._set_buttons_enabled(False)
+            progress = show_progress(self, "Restoring Backup")
+            progress.update("[1/2] Preparing...")
 
             def run_restore():
                 try:
                     def update_progress(msg: str):
-                        self.after(0, lambda: progress.update(msg))
+                        self.after(0, lambda m=msg: progress.update(m))
 
+                    progress.update("[2/2] Restoring files...")
                     do_restore(self.game, self.selected_backup, on_progress=update_progress)
 
                     self.after(0, lambda: (
                         progress.close(),
-                        alert(self, "Restore Complete", "Backup restored successfully!")
+                        self._set_buttons_enabled(True),
+                        alert(self, "Restore Complete", f"✓ Restored from: {self.selected_backup.name}")
                     ))
                 except Exception as e:
                     self.after(0, lambda: (
                         progress.close(),
+                        self._set_buttons_enabled(True),
                         alert(self, "Restore Failed", str(e))
                     ))
 
@@ -198,7 +216,7 @@ class BackupPanel(ctk.CTkFrame):
         confirm(
             self,
             title="Confirm Restore",
-            message=f"Restore backup '{self.selected_backup.name}'? This will overwrite current save data.",
+            message=f"Restore backup '{self.selected_backup.name}'?\n⚠ This will overwrite current save data.",
             on_result=handle_confirm
         )
 
@@ -232,7 +250,7 @@ class BackupPanel(ctk.CTkFrame):
 class BackupListItem(ctk.CTkFrame):
     """Single backup item in the list with improved styling."""
 
-    SELECTED_COLOR = "#00B4D8"
+    SELECTED_COLOR = "#3B8ED0"  # CTk blue
     
     def __init__(
         self,
@@ -281,7 +299,7 @@ class BackupListItem(ctk.CTkFrame):
             content,
             text=f"📦 {size_str} • {date_str}",
             anchor="e",
-            text_color="#00B4D8",
+            text_color="#3B8ED0",  # CTk blue
             font=ctk.CTkFont(size=10)
         ).pack(side="right", padx=5)
 

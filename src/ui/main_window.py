@@ -18,9 +18,9 @@ class MainWindow(ctk.CTk):
         self.geometry("850x550")
         self.minsize(650, 450)
 
-        # Set theme - electric cyan
+        # Set theme
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("cyan")
+        ctk.set_default_color_theme("blue")
 
         # Create layout
         self._create_menu_bar()
@@ -36,7 +36,7 @@ class MainWindow(ctk.CTk):
             menu,
             text="Listo ✓",
             anchor="w",
-            text_color="#00B4D8",
+            text_color="#3B8ED0",
             font=ctk.CTkFont(size=11, weight="bold")
         )
         self.status_label.pack(side="left", padx=10, pady=8)
@@ -72,7 +72,7 @@ class MainWindow(ctk.CTk):
             right_content,
             text="▶ Seleccioná un juego para ver backups",
             font=ctk.CTkFont(size=13, weight="bold"),
-            text_color="#00B4D8"
+            text_color="#3B8ED0"
         )
         self.game_header.pack(pady=(5, 0))
 

@@ -36,7 +36,7 @@ def show_tutorial(parent):
         dialog,
         text="📦 Guía Rápida",
         font=ctk.CTkFont(size=18, weight="bold"),
-        text_color="#00B4D8"
+        text_color="#3B8ED0"
     ).pack(pady=15)
     
     # Steps
@@ -54,7 +54,7 @@ def show_tutorial(parent):
             frame,
             text=title,
             font=ctk.CTkFont(size=13, weight="bold"),
-            text_color="#00B4D8",
+            text_color="#3B8ED0",
             anchor="w"
         ).pack(fill="x", padx=5)
         
@@ -72,7 +72,7 @@ def show_tutorial(parent):
         text="Entendido ✓",
         command=lambda: (seen_file.write_text("1"), dialog.destroy()),
         width=150,
-        fg_color="#00B4D8"
+        fg_color="#3B8ED0"
     ).pack(pady=20)
     
     # Open Add Game after closing tutorial
@@ -81,9 +81,9 @@ def show_tutorial(parent):
 
 def main():
     """Launch the Backup Manager application."""
-    # Configure CustomTkinter appearance
+    # Configure CustomTkinter appearance  
     ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("cyan")
+    ctk.set_default_color_theme("blue")
     
     # Create and launch the main window
     app = MainWindow()
