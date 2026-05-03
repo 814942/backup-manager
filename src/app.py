@@ -36,7 +36,7 @@ def show_tutorial(parent):
         dialog,
         text="QUICK GUIDE",
         font=ctk.CTkFont(size=18, weight="bold"),
-        text_color="#3B8ED0"
+        text_color="#49F0F0"
     ).pack(pady=15)
     
     # Steps in English
@@ -54,7 +54,7 @@ def show_tutorial(parent):
             frame,
             text=title,
             font=ctk.CTkFont(size=13, weight="bold"),
-            text_color="#3B8ED0",
+            text_color="#49F0F0",
             anchor="w"
         ).pack(fill="x", padx=5)
         
@@ -72,7 +72,7 @@ def show_tutorial(parent):
         text="Got it!",
         command=lambda: (seen_file.write_text("1"), dialog.destroy()),
         width=120,
-        fg_color="#3B8ED0"
+        fg_color="#49F0F0"
     ).pack(pady=20)
 
 

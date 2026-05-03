@@ -291,7 +291,7 @@ class BackupPanel(ctk.CTkFrame):
 class BackupListItem(ctk.CTkFrame):
     """Single backup item in the list with improved styling."""
 
-    SELECTED_COLOR = "#3B8ED0"  # CTk blue
+    SELECTED_COLOR = "#49F0F0"  # CTk blue
     HOVER_COLOR = ("gray75", "gray30")
     
     def __init__(
@@ -310,47 +310,56 @@ class BackupListItem(ctk.CTkFrame):
         self.is_selected = False
 
         # Make entire row clickable with full-width hitbox
+        # Use CTkFrame with proper size that expands
         self.hitbox = ctk.CTkFrame(
             self,
             fg_color="transparent",
             cursor="hand2",
-            corner_radius=8
+            corner_radius=8,
+            width=300,
+            height=40
         )
         self.hitbox.pack(fill="x", padx=2, pady=2)
+        self.hitbox.pack_propagate(False)  # Don't shrink to content
         
-        # Bind click to entire hitbox
+        # Bind click directly to the hitbox frame
         self.hitbox.bind("<Button-1>", lambda e: self._on_click())
         self.hitbox.bind("<Enter>", lambda e: self._on_hover(True))
         self.hitbox.bind("<Leave>", lambda e: self._on_hover(False))
-        
-        for child in self.hitbox.winfo_children():
-            child.bind("<Button-1>", lambda e: self._on_click())
-            child.bind("<Enter>", lambda e: self._on_hover(True))
-            child.bind("<Leave>", lambda e: self._on_hover(False))
 
-        # Content layout
+        # Content layout - placed inside hitbox
         content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
         content.pack(fill="x", padx=10, pady=8)
 
-        # Left: backup name
-        ctk.CTkLabel(
+        # Left: backup name - also clickable
+        name_label = ctk.CTkLabel(
             content,
             text=backup.name,
             anchor="w",
-            font=ctk.CTkFont(size=11, weight="bold")
-        ).pack(side="left", padx=5)
+            font=ctk.CTkFont(size=11, weight="bold"),
+            cursor="hand2"
+        )
+        name_label.pack(side="left", padx=5)
+        name_label.bind("<Button-1>", lambda e: self._on_click())
+        name_label.bind("<Enter>", lambda e: self._on_hover(True))
+        name_label.bind("<Leave>", lambda e: self._on_hover(False))
 
-        # Right: date and size
+        # Right: date and size - also clickable
         date_str = backup.created_at.strftime("%Y-%m-%d %H:%M")
         size_str = self._format_size(backup.size_bytes)
         
-        ctk.CTkLabel(
+        size_label = ctk.CTkLabel(
             content,
             text=f"{size_str} | {date_str}",
             anchor="e",
-            text_color="#3B8ED0",  # CTk blue
-            font=ctk.CTkFont(size=10)
-        ).pack(side="right", padx=5)
+            text_color="#49F0F0",
+            font=ctk.CTkFont(size=10),
+            cursor="hand2"
+        )
+        size_label.pack(side="right", padx=5)
+        size_label.bind("<Button-1>", lambda e: self._on_click())
+        size_label.bind("<Enter>", lambda e: self._on_hover(True))
+        size_label.bind("<Leave>", lambda e: self._on_hover(False))
 
     def _on_click(self):
         """Handle click on the backup item."""

@@ -10,7 +10,11 @@ def do_backup(
     game: Game,
     on_progress: Callable[[str], None] | None = None
 ) -> BackupEntry:
-    """Copy source_path to backup_path/<game-name>-YYYYMMDD_HHmmss."""
+    """Backup ONE single file (not entire folder) - the actual save file.
+    
+    This is much faster as it only backups the critical save file,
+    not temp files, cache, logs, etc.
+    """
     ts = timestamp()
     folder_name = f"{game.name}-{ts}"
     dest = Path(game.backup_path) / folder_name
@@ -18,34 +22,55 @@ def do_backup(
     # Ensure backup dir exists
     Path(game.backup_path).mkdir(parents=True, exist_ok=True)
     
+    source = Path(game.source_path)
+    
     if on_progress:
-        on_progress(f"Preparing backup of {game.name}...")
-        
-        # Count files for progress
-        total_files = sum(1 for _ in Path(game.source_path).rglob('*') if _.is_file())
-        
-        copied = 0
-        for file in Path(game.source_path).rglob('*'):
-            if file.is_file():
-                rel_path = file.relative_to(Path(game.source_path))
-                dest_file = dest / rel_path
-                dest_file.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(file, dest_file)
-                copied += 1
-                # Update progress every 50 files or at end
-                if copied % 50 == 0 or copied == total_files:
-                    pct = int(copied * 100 / total_files)
-                    on_progress(f"Copying files... {pct}% ({copied}/{total_files})")
-        
-        on_progress("Complete!")
+        on_progress("Preparing backup...")
+    
+    # Check if source is a file or directory
+    if source.is_file():
+        # Single file backup - just copy it
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, dest / source.name)
+        size = source.stat().st_size
     else:
-        shutil.copytree(Path(game.source_path), dest)
+        # Directory - find the actual save file (not all files!)
+        # Look for common save file patterns
+        save_file = None
+        for pattern in ["*.sav", "*.save", "*.bak", "*.dat"]:
+            matches = list(source.glob(pattern))
+            if matches:
+                save_file = matches[0]
+                break
+        
+        # If no pattern match, try first file in directory
+        if not save_file and source.exists():
+            files = [f for f in source.iterdir() if f.is_file()]
+            if files:
+                # Pick the largest file (likely the save)
+                save_file = max(files, key=lambda f: f.stat().st_size)
+        
+        if save_file:
+            dest.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(save_file, dest / save_file.name)
+            size = save_file.stat().st_size
+            if on_progress:
+                on_progress(f"Backed up: {save_file.name}")
+        else:
+            # No save file found - create empty backup
+            dest.mkdir(parents=True, exist_ok=True)
+            size = 0
+            if on_progress:
+                on_progress("No save file found - created empty backup")
+    
+    if on_progress:
+        on_progress("Complete!")
     
     return BackupEntry(
         name=folder_name,
         path=str(dest),
         created_at=datetime.now(),
-        size_bytes=folder_size(dest)
+        size_bytes=size
     )
 
 
@@ -54,37 +79,46 @@ def do_restore(
     backup: BackupEntry,
     on_progress: Callable[[str], None] | None = None
 ) -> None:
-    """Delete source, copy backup to source."""
+    """Restore ONE single file from backup (not entire folder)."""
     source = Path(game.source_path)
     backup_path = Path(backup.path)
     
     if on_progress:
         on_progress("Preparing restore...")
-        
-        # Count files in backup
-        total_files = sum(1 for _ in backup_path.rglob('*') if _.is_file())
-        
-        if source.exists():
-            on_progress("Removing old files...")
-            shutil.rmtree(source)
-        
-        copied = 0
-        for file in backup_path.rglob('*'):
-            if file.is_file():
-                rel_path = file.relative_to(backup_path)
-                dest_file = source / rel_path
-                dest_file.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(file, dest_file)
-                copied += 1
-                if copied % 50 == 0 or copied == total_files:
-                    pct = int(copied * 100 / total_files)
-                    on_progress(f"Restoring files... {pct}% ({copied}/{total_files})")
-        
-        on_progress("Restore complete!")
+    
+    # Find the save file in backup
+    save_file = None
+    if backup_path.is_file():
+        save_file = backup_path
     else:
-        if source.exists():
-            shutil.rmtree(source)
-        shutil.copytree(backup_path, source)
+        files = list(backup_path.glob("*sav*")) + list(backup_path.glob("*save*")) + list(backup_path.glob("*.bak"))
+        if files:
+            save_file = files[0]
+        else:
+            files = [f for f in backup_path.iterdir() if f.is_file()]
+            if files:
+                save_file = files[0]
+    
+    if save_file and save_file.exists():
+        # Restore single file
+        source.parent.mkdir(parents=True, exist_ok=True)
+        
+        # If source is a file, restore to same location
+        if source.is_file():
+            shutil.copy2(save_file, source)
+        else:
+            # It's a directory, restore to directory with same name
+            dest_file = source / save_file.name
+            shutil.copy2(save_file, dest_file)
+        
+        if on_progress:
+            on_progress(f"Restored: {save_file.name}")
+    else:
+        if on_progress:
+            on_progress("No save file found in backup")
+    
+    if on_progress:
+        on_progress("Restore complete!")
 
 
 def list_backups(game: Game) -> list[BackupEntry]:
