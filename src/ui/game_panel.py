@@ -31,7 +31,7 @@ class GamePanel(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self)
         btn_frame.pack(pady=5)
 
-ctk.CTkButton(
+        ctk.CTkButton(
             btn_frame,
             text="Add Game",
             command=self.add_game,
@@ -53,6 +53,7 @@ ctk.CTkButton(
         ).pack(side="left", padx=2)
 
         # Store button references for enable/disable
+        self._edit_btn = btn_frame.winfo_children()[0]
         self._remove_btn = btn_frame.winfo_children()[1]
 
         # Initial load
@@ -89,7 +90,7 @@ ctk.CTkButton(
         self._update_buttons()
         
         # Update visual selection with a clear highlight color
-        SELECTED_COLOR = "#3B8ED0"  # CTk blue
+        SELECTED_COLOR = "#49F0F0"  # CTk blue
         for widget in self.game_list.winfo_children():
             if isinstance(widget, ctk.CTkButton):
                 if widget.cget("text") == game.name:
