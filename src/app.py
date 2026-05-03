@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Backup Manager - Desktop app entry point for backing up and restoring PC game saves."""
 import sys
+import platform
+import subprocess
+import os
 from pathlib import Path
+# Cambia el import para soportar ejecución directa
+from version import APP_NAME, APP_VERSION
 
 # Add src to path for relative imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -13,43 +18,26 @@ from src.core.config import load_config
 
 
 def show_tutorial(parent):
-    """Show a simple tutorial popup for first-time users."""
-    # Check if already seen
-    import json
-    from pathlib import Path
-    
-    config_dir = Path.home() / ".config" / "backup-manager"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    seen_file = config_dir / ".tutorial_seen"
-    
-    if seen_file.exists():
-        return  # Already seen
-    
-    # Create tutorial dialog
+    """Show a simple tutorial popup for first-time users or when Help is clicked."""
     dialog = ctk.CTkToplevel(parent)
     dialog.title("Quick Guide")
-    dialog.geometry("480x380")
+    dialog.geometry("480x480")
     dialog.transient(parent)
     dialog.grab_set()
-    
     ctk.CTkLabel(
         dialog,
         text="QUICK GUIDE",
         font=ctk.CTkFont(size=18, weight="bold"),
         text_color="#3B8ED0"
     ).pack(pady=15)
-    
-    # Steps in English
     steps = [
         ("1. Add a Game", "Click 'Add', enter name, select save folder and backup location"),
         ("2. Create Backup", "Select game, click 'Backup' to save current progress"),
         ("3. Restore", "Select a backup, click 'Restore' if something goes wrong"),
     ]
-    
     for title, desc in steps:
         frame = ctk.CTkFrame(dialog, fg_color="transparent")
         frame.pack(fill="x", padx=20, pady=5)
-        
         ctk.CTkLabel(
             frame,
             text=title,
@@ -57,7 +45,6 @@ def show_tutorial(parent):
             text_color="#3B8ED0",
             anchor="w"
         ).pack(fill="x", padx=5)
-        
         ctk.CTkLabel(
             frame,
             text=desc,
@@ -65,12 +52,53 @@ def show_tutorial(parent):
             anchor="w",
             wraplength=400
         ).pack(fill="x", padx=15)
-    
-    # Close button
+
+    # --- ABOUT SECTION ---
+    about_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+    about_frame.pack(fill="x", padx=20, pady=10)
+    ctk.CTkLabel(
+        about_frame,
+        text="About",
+        font=ctk.CTkFont(size=14, weight="bold"),
+        text_color="#3B8ED0",
+        anchor="w"
+    ).pack(fill="x", padx=5, pady=(10, 0))
+
+    # Get git info
+    try:
+        git_hash = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL).decode().strip()
+        git_date = subprocess.check_output(["git", "log", "-1", "--format=%cd", "--date=short"], cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        git_hash = "N/A"
+        git_date = "N/A"
+
+    # Get main libraries
+    try:
+        import customtkinter
+        ctk_version = customtkinter.__version__
+    except Exception:
+        ctk_version = "?"
+
+    py_version = platform.python_version()
+
+    about_text = f"""
+{APP_NAME} v{APP_VERSION}
+Commit: {git_hash} ({git_date})
+Python: {py_version}
+CustomTkinter: {ctk_version}
+"""
+    ctk.CTkLabel(
+        about_frame,
+        text=about_text,
+        font=ctk.CTkFont(size=11),
+        justify="left",
+        anchor="w"
+    ).pack(fill="x", padx=10, pady=5)
+
     ctk.CTkButton(
         dialog,
         text="Got it!",
-        command=lambda: (seen_file.write_text("1"), dialog.destroy()),
+        command=dialog.destroy,
         width=120,
         fg_color="#3B8ED0"
     ).pack(pady=20)

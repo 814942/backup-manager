@@ -262,9 +262,9 @@ class BackupPanel(ctk.CTkFrame):
                 entry = do_backup(self.game, file_to_backup, on_progress=update_progress)
                 
                 if dialog_open[0]:
+                    dialog_open[0] = False
                     self.after(0, lambda: (
                         progress.close(),
-                        dialog_open[0] = False,
                         self.refresh(),
                         self._set_buttons_enabled(True),
                         alert(self, "Backup Complete", f"Saved: {entry.name} ({format_size(entry.size_bytes)})")
@@ -272,18 +272,18 @@ class BackupPanel(ctk.CTkFrame):
             except PermissionError as exc:
                 err_msg = f"Permission denied: {exc}\n\nMake sure the file is not in use by another program."
                 if dialog_open[0]:
+                    dialog_open[0] = False
                     self.after(0, lambda err_msg=err_msg: (
                         progress.close(),
-                        dialog_open[0] = False,
                         self._set_buttons_enabled(True),
                         alert(self, "Backup Failed", err_msg)
                     ))
             except Exception as exc:
                 err_msg = str(exc)
                 if dialog_open[0]:
+                    dialog_open[0] = False
                     self.after(0, lambda err_msg=err_msg: (
                         progress.close(),
-                        dialog_open[0] = False,
                         self._set_buttons_enabled(True),
                         alert(self, "Backup Failed", err_msg)
                     ))
@@ -327,17 +327,17 @@ class BackupPanel(ctk.CTkFrame):
                     do_restore(self.game, self.selected_backup, on_progress=update_progress)
 
                     if dialog_open[0]:
+                        dialog_open[0] = False
                         self.after(0, lambda: (
                             progress.close(),
-                            dialog_open[0] = False,
                             self._set_buttons_enabled(True),
                             alert(self, "Restore Complete", f"Restored from: {self.selected_backup.name}")
                         ))
                 except Exception as e:
                     if dialog_open[0]:
+                        dialog_open[0] = False
                         self.after(0, lambda: (
                             progress.close(),
-                            dialog_open[0] = False,
                             self._set_buttons_enabled(True),
                             alert(self, "Restore Failed", str(e))
                         ))
@@ -444,7 +444,7 @@ class BackupListItem(ctk.CTkFrame):
             content,
             text=f"{size_str} | {date_str}",
             anchor="e",
-            text_color=self.SIZE_TEXT_COLOR,
+            text_color="#FFFFFF",  # SIEMPRE BLANCO
             font=ctk.CTkFont(size=10, weight="bold"),
             cursor="hand2"
         )
