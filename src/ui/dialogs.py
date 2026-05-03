@@ -16,9 +16,6 @@ class ConfirmDialog(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
 
-        # FIX ISS-09: Closing via X behaves the same as clicking No.
-        # Without this, result stays False but the dialog never calls destroy(),
-        # leaving wait_window() hanging indefinitely.
         self.protocol("WM_DELETE_WINDOW", self.on_no)
 
         ctk.CTkLabel(self, text=message, wraplength=350).pack(pady=20)

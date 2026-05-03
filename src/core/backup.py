@@ -19,8 +19,6 @@ def list_files_for_backup(game: Game) -> list[Path]:
     return []
 
 
-# FIX ISS-01: file_to_backup is now optional (default None).
-# When None, the entire source_path folder is backed up (original PowerShell behavior).
 def do_backup(
     game: Game,
     file_to_backup: Path | None = None,
@@ -37,7 +35,6 @@ def do_backup(
     Path(game.backup_path).mkdir(parents=True, exist_ok=True)
     dest.mkdir(parents=True, exist_ok=True)
 
-    # If no specific file given, back up the whole source folder
     target = file_to_backup if file_to_backup is not None else Path(game.source_path)
 
     if on_progress:
@@ -82,9 +79,6 @@ def do_backup(
     )
 
 
-# FIX ISS-02: Removed fragile glob("*sav*") fallback.
-# do_backup always copies the entire source folder, so do_restore
-# simply replaces it entirely — no file-matching needed.
 def do_restore(
     game: Game,
     backup: BackupEntry,

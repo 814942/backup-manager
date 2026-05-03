@@ -10,7 +10,6 @@ from src.core.backup import list_backups, do_backup, do_restore, delete_backup, 
 from src.ui.dialogs import confirm, show_progress, alert
 
 
-# --- UTILITIES ---
 def format_size(size_bytes: int) -> str:
     """Format size in human-readable form."""
     for unit in ['B', 'KB', 'MB', 'GB']:

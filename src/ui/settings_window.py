@@ -103,8 +103,6 @@ class SettingsWindow(ctk.CTkToplevel):
         backup = self.backup_entry.get().strip()
 
         if not name or not source or not backup:
-            # FIX ISS-07: Save a direct reference to the error label instead of
-            # searching self.children with fragile list comprehension (caused IndexError).
             err_label = ctk.CTkLabel(self, text="All fields are required!", text_color="red")
             err_label.place(relx=0.5, rely=0.95, anchor="center")
             self.after(2000, err_label.destroy)

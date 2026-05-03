@@ -4,8 +4,6 @@ import sys
 import platform
 from pathlib import Path
 
-# FIX ISS-04: Consistent absolute import — works both in dev and when packaged with PyInstaller.
-# Removed sys.path.insert hack and the mixed relative import.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.version import APP_NAME, APP_VERSION
@@ -53,7 +51,6 @@ def show_tutorial(parent):
             wraplength=400
         ).pack(fill="x", padx=15)
 
-    # --- ABOUT SECTION ---
     about_frame = ctk.CTkFrame(dialog, fg_color="transparent")
     about_frame.pack(fill="x", padx=20, pady=10)
 
@@ -65,8 +62,6 @@ def show_tutorial(parent):
         anchor="w"
     ).pack(fill="x", padx=5, pady=(10, 0))
 
-    # FIX ISS-05: Removed subprocess git calls — they fail silently in the packaged .exe
-    # and add ~200ms latency. Version info now comes from src/version.py constants.
     try:
         import customtkinter
         ctk_version = customtkinter.__version__
@@ -105,7 +100,6 @@ def main():
 
     app = MainWindow()
 
-    # Show tutorial on first run (check if config is empty)
     try:
         config = load_config()
         is_first_run = not config.games

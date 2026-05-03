@@ -77,8 +77,6 @@ class MainWindow(ctk.CTk):
 
     def open_settings(self):
         """Open the settings window and wait for it to close before refreshing."""
-        # FIX ISS-08: wait_window() blocks until the user closes Settings,
-        # so the game list refresh always runs after changes are saved.
         win = SettingsWindow(self)
         self.wait_window(win)
         self.game_panel.refresh()
