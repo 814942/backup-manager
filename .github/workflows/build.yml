@@ -1,0 +1,33 @@
+name: Build Windows EXE
+
+on:
+  push:
+    tags:
+      - "v*"           # Se dispara con tags tipo v1.0.0, v1.1.0
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build EXE
+        run: |
+          pyinstaller --onefile --windowed --name GameBackupManager src/app.py
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/GameBackupManager.exe
