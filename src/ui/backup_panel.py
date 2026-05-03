@@ -249,16 +249,12 @@ class BackupPanel(ctk.CTkFrame):
         def run_backup():
             try:
                 def update_progress(msg: str):
-                    # Check if dialog is still open before updating
-                    if not dialog_open[0]:
-                        return
                     try:
-                        if hasattr(progress, 'winfo_exists') and progress.winfo_exists():
-                            self.after(0, lambda m=msg: progress.update(m))
-                    except:
-                        pass
-                
-                progress.update(f"[2/2] Copying {file_to_backup.name} ...")
+                        self.after(0, lambda m=msg: progress.update(m))
+                    except tkinter.TclError:
+                        pass  # Widget destroyed — expected when dialog is closed early
+
+                progress.update("[2/2] Copying {file_to_backup.name} ...")
                 entry = do_backup(self.game, file_to_backup, on_progress=update_progress)
                 
                 if dialog_open[0]:

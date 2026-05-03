@@ -99,10 +99,10 @@ class MainWindow(ctk.CTk):
 
     def open_settings(self):
         """Open the settings window."""
-        SettingsWindow(self)
-        # Refresh game list after settings window closes
+        win = SettingsWindow(self)
+        self.wait_window(win)
         self.game_panel.refresh()
-        self.status_label.configure(text="Settings closed, game list refreshed")
+        self.status_label.configure(text="Ready")
 
     def run(self):
         """Start the application main loop."""

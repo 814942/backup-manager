@@ -22,13 +22,14 @@ def list_files_for_backup(game: Game) -> list[Path]:
 
 def do_backup(
     game: Game,
-    file_to_backup: Path,
+    file_to_backup: Path | None = None,
     on_progress: Callable[[str], None] | None = None
 ) -> BackupEntry:
     """
-    Backup a specific file from the game's source_path.
+    Backup a specific file or the entire source_path if file_to_backup is None.
     Uses copy with error handling for locked files.
     """
+    target = file_to_backup or Path(game.source_path)
     ts = timestamp()
     folder_name = f"{game.name}-{ts}"
     dest = Path(game.backup_path) / folder_name
@@ -36,39 +37,39 @@ def do_backup(
     dest.mkdir(parents=True, exist_ok=True)
 
     if on_progress:
-        on_progress(f"Backing up: {file_to_backup.name}")
+        on_progress(f"Backing up: {target.name}")
 
     try:
-        if file_to_backup.is_dir():
+        if target.is_dir():
             # Use copytree for directories
-            shutil.copytree(file_to_backup, dest / file_to_backup.name)
-            size = folder_size(dest / file_to_backup.name)
+            shutil.copytree(target, dest / target.name)
+            size = folder_size(dest / target.name)
         else:
             # Try copy2 first (preserves metadata)
-            shutil.copy2(file_to_backup, dest / file_to_backup.name)
-            size = file_to_backup.stat().st_size
+            shutil.copy2(target, dest / target.name)
+            size = target.stat().st_size
     except PermissionError:
         # If PermissionError, try regular copy (less strict)
         try:
-            if file_to_backup.is_dir():
-                shutil.copytree(file_to_backup, dest / file_to_backup.name)
+            if target.is_dir():
+                shutil.copytree(target, dest / target.name)
             else:
-                shutil.copy(file_to_backup, dest / file_to_backup.name)
-            size = folder_size(dest / file_to_backup.name) if file_to_backup.is_dir() else file_to_backup.stat().st_size
+                shutil.copy(target, dest / target.name)
+            size = folder_size(dest / target.name) if target.is_dir() else target.stat().st_size
         except Exception as e:
-            raise PermissionError(f"Cannot access: {file_to_backup.name}. It may be in use by another program.") from e
+            raise PermissionError(f"Cannot access: {target.name}. It may be in use by another program.") from e
     except Exception as e:
         # Try with lower-level copy as last resort (for files only)
-        if file_to_backup.is_file():
+        if target.is_file():
             try:
-                with open(file_to_backup, 'rb') as src:
-                    with open(dest / file_to_backup.name, 'wb') as dst:
+                with open(target, 'rb') as src:
+                    with open(dest / target.name, 'wb') as dst:
                         dst.write(src.read())
-                size = file_to_backup.stat().st_size
+                size = target.stat().st_size
             except Exception as e2:
-                raise PermissionError(f"Cannot copy {file_to_backup.name}: {e2}") from e2
+                raise PermissionError(f"Cannot copy {target.name}: {e2}") from e2
         else:
-            raise PermissionError(f"Cannot copy {file_to_backup.name}: {e}") from e
+            raise PermissionError(f"Cannot copy {target.name}: {e}") from e
 
     if on_progress:
         on_progress("Complete!")
@@ -86,65 +87,14 @@ def do_restore(
     backup: BackupEntry,
     on_progress: Callable[[str], None] | None = None
 ) -> None:
-    """Restore from backup - handles both files and folders."""
+    """Restore from backup: reemplaza toda la carpeta source_path con el backup."""
     source = Path(game.source_path)
     backup_path = Path(backup.path)
-    
     if on_progress:
         on_progress("Preparing restore...")
-    
-    # Handle folder restore (if backup is a folder)
-    if backup_path.is_dir():
-        # Find content to restore - could be a subfolder or files
-        items = list(backup_path.iterdir())
-        
-        if items:
-            # If there's a single item that's a folder, restore it
-            for item in items:
-                if item.is_dir():
-                    # Restore entire folder to source location
-                    source.mkdir(parents=True, exist_ok=True)
-                    dest = source / item.name
-                    if dest.exists():
-                        shutil.rmtree(dest)
-                    shutil.copytree(item, dest)
-                else:
-                    # Restore individual files
-                    source.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(item, source / item.name)
-            
-            if on_progress:
-                on_progress("Restore complete!")
-            return
-    
-    # Original logic for single file restore
-    save_file = None
-    if backup_path.is_file():
-        save_file = backup_path
-    else:
-        files = list(backup_path.glob("*sav*")) + list(backup_path.glob("*save*")) + list(backup_path.glob("*.bak"))
-        if files:
-            save_file = files[0]
-        else:
-            files = [f for f in backup_path.iterdir() if f.is_file()]
-            if files:
-                save_file = files[0]
-    
-    if save_file and save_file.exists():
-        if source.is_file():
-            source.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(save_file, source)
-        else:
-            source.mkdir(parents=True, exist_ok=True)
-            dest_file = source / save_file.name
-            shutil.copy2(save_file, dest_file)
-        
-        if on_progress:
-            on_progress(f"Restored: {save_file.name}")
-    else:
-        if on_progress:
-            on_progress("No save file found in backup")
-    
+    if source.exists():
+        shutil.rmtree(source)
+    shutil.copytree(backup_path, source)
     if on_progress:
         on_progress("Restore complete!")
 
@@ -168,5 +118,8 @@ def list_backups(game: Game) -> list[BackupEntry]:
 
 
 def delete_backup(backup: BackupEntry) -> None:
-    """Delete backup folder."""
-    shutil.rmtree(backup.path)
+    """Delete backup folder, verifica existencia antes de borrar."""
+    path = Path(backup.path)
+    if not path.exists():
+        raise FileNotFoundError(f'Backup not found: {backup.path}')
+    shutil.rmtree(path)

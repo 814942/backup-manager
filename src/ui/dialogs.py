@@ -17,6 +17,8 @@ class ConfirmDialog(ctk.CTkToplevel):
         self.transient(parent)
         self.grab_set()
 
+        self.protocol('WM_DELETE_WINDOW', self.on_no)  # X = No
+
         # Message
         ctk.CTkLabel(
             self,

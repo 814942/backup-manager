@@ -40,6 +40,19 @@ pyinstaller --onefile --windowed --name BackupManager src/app.py
 
 The .exe will be in `dist/BackupManager.exe`.
 
+## Ejecución recomendada
+
+Para ejecutar la aplicación correctamente (con imports absolutos y sin errores de módulo):
+
+```
+python -m src.app
+```
+
+Ejecuta este comando desde la raíz del proyecto (donde está la carpeta `src/`).
+
+- Si ejecutas `python src/app.py` directamente, los imports absolutos fallarán.
+- Este método es compatible con PyInstaller y otras herramientas de empaquetado.
+
 ## Development
 
 ```bash

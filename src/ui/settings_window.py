@@ -150,13 +150,10 @@ class SettingsWindow(ctk.CTkToplevel):
         source = self.source_entry.get().strip()
         backup = self.backup_entry.get().strip()
 
-        if not name or not source or not backup:
-            ctk.CTkLabel(
-                self,
-                text="All fields are required!",
-                text_color="red"
-            ).place(relx=0.5, rely=0.95, anchor="center")
-            self.after(2000, lambda: self.children[[k for k in self.children.keys() if 'label' in str(type(self.children[k]))][0]].destroy() if self.children else None)
+        if not all_fields:
+            err_label = ctk.CTkLabel(self, text='All fields are required!', text_color='red')
+            err_label.place(relx=0.5, rely=0.95, anchor='center')
+            self.after(2000, err_label.destroy)
             return
 
         config = load_config()

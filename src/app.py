@@ -5,13 +5,7 @@ import platform
 import subprocess
 import os
 from pathlib import Path
-# Cambia el import para soportar ejecución directa
-from version import APP_NAME, APP_VERSION
-
-# Add src to path for relative imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-import customtkinter as ctk
+from src.version import APP_NAME, APP_VERSION, BUILD_HASH, BUILD_DATE
 from src.ui.main_window import MainWindow
 from src.ui.game_panel import GamePanel
 from src.core.config import load_config
@@ -65,12 +59,15 @@ def show_tutorial(parent):
     ).pack(fill="x", padx=5, pady=(10, 0))
 
     # Get git info
-    try:
-        git_hash = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL).decode().strip()
-        git_date = subprocess.check_output(["git", "log", "-1", "--format=%cd", "--date=short"], cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL).decode().strip()
-    except Exception:
-        git_hash = "N/A"
-        git_date = "N/A"
+    git_hash = getattr(sys.modules.get('src.version'), 'BUILD_HASH', None) or None
+    git_date = getattr(sys.modules.get('src.version'), 'BUILD_DATE', None) or None
+    if not git_hash or not git_date or git_hash == 'N/A' or git_date == 'N/A':
+        try:
+            git_hash = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL).decode().strip()
+            git_date = subprocess.check_output(["git", "log", "-1", "--format=%cd", "--date=short"], cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL).decode().strip()
+        except Exception:
+            git_hash = "N/A"
+            git_date = "N/A"
 
     # Get main libraries
     try:
