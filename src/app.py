@@ -9,6 +9,7 @@ from src.version import APP_NAME, APP_VERSION, BUILD_HASH, BUILD_DATE
 from src.ui.main_window import MainWindow
 from src.ui.game_panel import GamePanel
 from src.core.config import load_config
+import customtkinter as ctk
 
 
 def show_tutorial(parent):
