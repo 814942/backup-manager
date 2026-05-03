@@ -13,36 +13,21 @@ class ConfirmDialog(ctk.CTkToplevel):
         self.geometry("400x150")
         self.resizable(False, False)
 
-        # Center the dialog
         self.transient(parent)
         self.grab_set()
 
-        self.protocol('WM_DELETE_WINDOW', self.on_no)  # X = No
+        # FIX ISS-09: Closing via X behaves the same as clicking No.
+        # Without this, result stays False but the dialog never calls destroy(),
+        # leaving wait_window() hanging indefinitely.
+        self.protocol("WM_DELETE_WINDOW", self.on_no)
 
-        # Message
-        ctk.CTkLabel(
-            self,
-            text=message,
-            wraplength=350
-        ).pack(pady=20)
+        ctk.CTkLabel(self, text=message, wraplength=350).pack(pady=20)
 
-        # Buttons
         btn_frame = ctk.CTkFrame(self)
         btn_frame.pack(pady=10)
 
-        ctk.CTkButton(
-            btn_frame,
-            text="Yes",
-            command=self.on_yes,
-            width=80
-        ).pack(side="left", padx=5)
-
-        ctk.CTkButton(
-            btn_frame,
-            text="No",
-            command=self.on_no,
-            width=80
-        ).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Yes", command=self.on_yes, width=80).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="No",  command=self.on_no,  width=80).pack(side="left", padx=5)
 
     def on_yes(self):
         self.result = True
@@ -54,7 +39,7 @@ class ConfirmDialog(ctk.CTkToplevel):
 
 
 class ProgressDialog(ctk.CTkToplevel):
-    """Progress dialog showing status message with indeterminate progress bar."""
+    """Progress dialog with indeterminate progress bar."""
 
     def __init__(self, parent, title: str):
         super().__init__(parent)
@@ -62,18 +47,13 @@ class ProgressDialog(ctk.CTkToplevel):
         self.geometry("400x120")
         self.resizable(False, False)
 
-        # Center the dialog
         self.transient(parent)
         self.grab_set()
 
         self.label = ctk.CTkLabel(self, text="Working...")
         self.label.pack(pady=20)
 
-        self.progress = ctk.CTkProgressBar(
-            self,
-            orientation="horizontal",
-            mode="indeterminate"
-        )
+        self.progress = ctk.CTkProgressBar(self, orientation="horizontal", mode="indeterminate")
         self.progress.pack(pady=10, padx=20, fill="x")
         self.progress.start()
 
@@ -97,24 +77,11 @@ class AlertDialog(ctk.CTkToplevel):
         self.geometry("400x150")
         self.resizable(False, False)
 
-        # Center the dialog
         self.transient(parent)
         self.grab_set()
 
-        # Message
-        ctk.CTkLabel(
-            self,
-            text=message,
-            wraplength=350
-        ).pack(pady=20)
-
-        # Button
-        ctk.CTkButton(
-            self,
-            text="OK",
-            command=self.destroy,
-            width=80
-        ).pack(pady=10)
+        ctk.CTkLabel(self, text=message, wraplength=350).pack(pady=20)
+        ctk.CTkButton(self, text="OK", command=self.destroy, width=80).pack(pady=10)
 
 
 def confirm(
@@ -131,14 +98,9 @@ def confirm(
     return dialog.result
 
 
-def show_progress(
-    parent,
-    title: str,
-    on_close: Optional[Callable[[], None]] = None
-) -> ProgressDialog:
+def show_progress(parent, title: str, on_close: Optional[Callable[[], None]] = None) -> ProgressDialog:
     """Show a progress dialog and return the dialog object."""
-    dialog = ProgressDialog(parent, title)
-    return dialog
+    return ProgressDialog(parent, title)
 
 
 def alert(parent, title: str, message: str):
