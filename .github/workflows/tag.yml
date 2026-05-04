@@ -7,6 +7,8 @@ jobs:
   tag-and-build:
     if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')
     runs-on: windows-latest
+    permissions:
+      contents: write 
     steps:
       - uses: actions/checkout@v4
       - name: Read version
