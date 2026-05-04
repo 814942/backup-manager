@@ -180,7 +180,7 @@ Contributions are welcome! Here's how to get started:
 - Use type hints on all function signatures
 - Use `pathlib.Path` for file paths, not `os.path`
 - No bare `except` — always catch specific exceptions
-- Keep UI and core logic strictly separated (`ui/` never imports from itself into `core/`)
+- Keep UI and core logic strictly separated (`core/` must not import from `ui/`)
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
   ```
   feat: add auto-backup on schedule
