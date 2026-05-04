@@ -83,7 +83,7 @@ pip install -r requirements.txt
 python -m src.app
 ```
 
-> **Note:** Always run with `python -m src.app` from the project root, not `python src/app.py`. This ensures absolute imports resolve correctly.
+> **Note:** Always run the app with `python -m src.app` from the project root, not `python src/app.py`. Running it directly as a script breaks absolute imports. The `src/app.py` path used in PyInstaller build commands (below) is correct — PyInstaller accepts a script path as its entry point, which is different from executing it with `python src/app.py`.
 
 ### Install dev dependencies
 
