@@ -26,3 +26,5 @@ Thumbs.db
 # App specific
 config.json
 *.log
+
+release.ps1
