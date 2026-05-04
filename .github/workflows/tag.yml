@@ -1,0 +1,30 @@
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  tag-and-build:
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read version
+        id: version
+        run: |
+          $v = (Get-Content src/version.py | Select-String 'APP_VERSION').ToString().Split('"')[1]
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+      - name: Create tag
+        run: |
+          git tag v${{ steps.version.outputs.version }}
+          git push origin v${{ steps.version.outputs.version }}
+      - name: Build EXE
+        run: |
+          pip install -r requirements.txt pyinstaller
+          pyinstaller --onefile --windowed --name GameBackupManager src/app.py
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: dist/GameBackupManager.exe
