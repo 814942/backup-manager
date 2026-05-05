@@ -85,8 +85,8 @@ def do_restore(
     on_progress: Callable[[str], None] | None = None
 ) -> None:
     """
-    Restore from backup by replacing the entire source_path folder.
-    Deletes the current save and copies the backup in its place.
+    Restore from backup by merging/overwriting the backup contents into the existing save directory.
+    Only files and folders present in the backup are overwritten; unrelated saves are preserved.
     """
     source = Path(game.source_path)
     backup_path = Path(backup.path)
@@ -103,17 +103,23 @@ def do_restore(
         on_progress("Restoring backup (without deleting existing saves)...")
 
     # Copy the contents of the backup to the destination, overwriting only matching files/folders
-    def copy_contents(src: Path, dst: Path):
+    def copy_contents(src: Path, dst: Path) -> None:
+        dst.mkdir(parents=True, exist_ok=True)
         for item in src.iterdir():
             dest_item = dst / item.name
             if item.is_dir():
-                if dest_item.exists():
-                    # If it already exists, merge contents
+                if dest_item.exists() and dest_item.is_dir():
+                    # Both are directories: merge contents recursively
                     copy_contents(item, dest_item)
                 else:
+                    if dest_item.exists():
+                        # dest_item is a file but source is a dir: remove it first
+                        dest_item.unlink()
                     shutil.copytree(item, dest_item)
             else:
-                dest_item.parent.mkdir(parents=True, exist_ok=True)
+                if dest_item.exists() and dest_item.is_dir():
+                    # dest_item is a directory but source is a file: remove it first
+                    shutil.rmtree(dest_item)
                 shutil.copy2(item, dest_item)
 
     items = [i for i in backup_path.iterdir()]

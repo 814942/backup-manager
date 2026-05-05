@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from src.core.models import Game
 from src.core.backup import do_backup, do_restore
@@ -12,7 +11,7 @@ def make_game_with_multiple_saves(tmp_path: Path) -> Game:
     backups.mkdir()
     return Game(id="test", name="Test", source_path=str(source), backup_path=str(backups))
 
-def test_restore_does_not_delete_other_saves(tmp_path):
+def test_restore_does_not_delete_other_saves(tmp_path: Path) -> None:
     game = make_game_with_multiple_saves(tmp_path)
     # Backup only main_save.bin
     entry = do_backup(game, file_to_backup=Path(game.source_path) / "main_save.bin")
