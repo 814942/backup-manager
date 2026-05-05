@@ -97,24 +97,30 @@ def do_restore(
     if not backup_path.exists():
         raise FileNotFoundError(f"Backup not found: {backup.path}")
 
-    # Remove current save
-    if source.exists():
-        if source.is_dir():
-            shutil.rmtree(source)
-        else:
-            source.unlink()
+
 
     if on_progress:
-        on_progress("Copying files...")
+        on_progress("Restoring backup (without deleting existing saves)...")
 
-    # The backup folder contains a single subfolder with the original save name.
-    # Copy that subfolder back to the source location.
+    # Copy the contents of the backup to the destination, overwriting only matching files/folders
+    def copy_contents(src: Path, dst: Path):
+        for item in src.iterdir():
+            dest_item = dst / item.name
+            if item.is_dir():
+                if dest_item.exists():
+                    # If it already exists, merge contents
+                    copy_contents(item, dest_item)
+                else:
+                    shutil.copytree(item, dest_item)
+            else:
+                dest_item.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(item, dest_item)
+
     items = [i for i in backup_path.iterdir()]
     if len(items) == 1 and items[0].is_dir():
-        shutil.copytree(items[0], source)
+        copy_contents(items[0], source)
     else:
-        # Fallback: copy the entire backup folder to source
-        shutil.copytree(backup_path, source)
+        copy_contents(backup_path, source)
 
     if on_progress:
         on_progress("Restore complete!")
