@@ -104,22 +104,28 @@ def do_restore(
 
     # Copy the contents of the backup to the destination, overwriting only matching files/folders
     def copy_contents(src: Path, dst: Path) -> None:
+        """
+        Recursively copy contents from src to dst, overwriting files/folders and handling file/dir type mismatches.
+        """
         dst.mkdir(parents=True, exist_ok=True)
         for item in src.iterdir():
             dest_item = dst / item.name
             if item.is_dir():
-                if dest_item.exists() and dest_item.is_dir():
-                    # Both are directories: merge contents recursively
-                    copy_contents(item, dest_item)
-                else:
-                    if dest_item.exists():
+                if dest_item.exists():
+                    if dest_item.is_dir():
+                        # Both are directories: merge contents recursively
+                        copy_contents(item, dest_item)
+                    else:
                         # dest_item is a file but source is a dir: remove it first
                         dest_item.unlink()
+                        shutil.copytree(item, dest_item)
+                else:
                     shutil.copytree(item, dest_item)
             else:
-                if dest_item.exists() and dest_item.is_dir():
-                    # dest_item is a directory but source is a file: remove it first
-                    shutil.rmtree(dest_item)
+                if dest_item.exists():
+                    if dest_item.is_dir():
+                        # dest_item is a directory but source is a file: remove it first
+                        shutil.rmtree(dest_item)
                 shutil.copy2(item, dest_item)
 
     items = [i for i in backup_path.iterdir()]
