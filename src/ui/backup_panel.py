@@ -371,11 +371,7 @@ class BackupListItem(ctk.CTkFrame):
         content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
         content.pack(fill="x", padx=10, pady=8)
 
-        def forward_event_to_hitbox(event, handler):
-            handler(event)
-            return "break"  # Evita que el evento se propague más
-
-        # Bind de click y hover en content y labels, reenviando al hitbox
+        # Bind click and hover on child widgets so the entire row stays interactive.
         for widget in [content]:
             widget.bind("<Button-1>", lambda e: self._on_click())
             widget.bind("<Enter>", lambda e: self._on_hover(True))
