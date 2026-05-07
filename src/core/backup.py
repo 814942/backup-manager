@@ -129,10 +129,25 @@ def do_restore(
                 shutil.copy2(item, dest_item)
 
     items = [i for i in backup_path.iterdir()]
-    if len(items) == 1 and items[0].is_dir():
-        copy_contents(items[0], source)
-    else:
-        copy_contents(backup_path, source)
+    try:
+        # Si el backup contiene una sola carpeta (el save), copiar esa carpeta dentro del destino
+        if len(items) == 1 and items[0].is_dir():
+            dest = source / items[0].name
+            if dest.exists():
+                if dest.is_dir():
+                    shutil.rmtree(dest)
+                else:
+                    dest.unlink()
+            shutil.copytree(items[0], dest)
+        else:
+            copy_contents(backup_path, source)
+    except PermissionError as e:
+        raise PermissionError(
+            "Permission denied while restoring files.\n"
+            "This may happen if OneDrive, antivirus, or another process is using the files or folder.\n"
+            "Please close OneDrive, wait for sync to finish, or close any program using the folder, then try again.\n\n"
+            f"Details: {e}"
+        ) from e
 
     if on_progress:
         on_progress("Restore complete!")
@@ -159,7 +174,23 @@ def list_backups(game: Game) -> list[BackupEntry]:
 # FIX ISS-03: Check path exists before deleting to avoid FileNotFoundError on double-click.
 def delete_backup(backup: BackupEntry) -> None:
     """Delete backup folder from disk."""
+    import os
+    import stat
     path = Path(backup.path)
     if not path.exists():
         raise FileNotFoundError(f"Backup not found: {backup.path}")
-    shutil.rmtree(path)
+
+    def onerror(func, path_str, exc_info):
+        # Force deletion of read-only files
+        try:
+            os.chmod(path_str, stat.S_IWRITE)
+            func(path_str)
+        except Exception as e:
+            raise PermissionError(f"Could not delete '{path_str}': {e}") from e
+
+    try:
+        shutil.rmtree(path, onerror=onerror)
+    except PermissionError as e:
+        raise PermissionError(f"Access denied while deleting backup: {path}\n{e}") from e
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error while deleting backup: {path}\n{e}") from e
