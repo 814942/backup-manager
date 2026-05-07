@@ -143,10 +143,10 @@ def do_restore(
             copy_contents(backup_path, source)
     except PermissionError as e:
         raise PermissionError(
-            f"Acceso denegado al restaurar archivos.\n"
-            f"Es posible que OneDrive, antivirus u otro proceso esté usando los archivos o la carpeta.\n"
-            f"Cierre OneDrive, espere a que termine la sincronización, o cierre cualquier programa que use la carpeta y vuelva a intentar.\n\n"
-            f"Detalle: {e}"
+            f"Access denied while restoring files.\n"
+            f"OneDrive, antivirus software, or another process may be using the files or folder.\n"
+            f"Close OneDrive, wait for synchronization to finish, or close any program using the folder and try again.\n\n"
+            f"Details: {e}"
         ) from e
 
     if on_progress:
