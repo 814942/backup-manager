@@ -368,7 +368,7 @@ class BackupListItem(ctk.CTkFrame):
         self.hitbox.bind("<Enter>", lambda e: self._on_hover(True))
         self.hitbox.bind("<Leave>", lambda e: self._on_hover(False))
 
-        content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
+        content = ctk.CTkFrame(self.hitbox, fg_color="transparent", cursor="hand2")
         content.pack(fill="x", padx=10, pady=8)
 
         # Bind click and hover on child widgets so the entire row stays interactive.
@@ -380,7 +380,7 @@ class BackupListItem(ctk.CTkFrame):
         self.name_label = ctk.CTkLabel(
             content, text=backup.name, anchor="w",
             font=ctk.CTkFont(size=11, weight="bold"),
-            text_color="#ffffff"
+            text_color="#ffffff", cursor="hand2"
         )
         self.name_label.pack(side="left", padx=5)
         self.name_label.bind("<Button-1>", lambda e: self._on_click())
@@ -392,7 +392,7 @@ class BackupListItem(ctk.CTkFrame):
 
         self.size_label = ctk.CTkLabel(
             content, text=f"{size_str} | {date_str}", anchor="e",
-            text_color="#FFFFFF", font=ctk.CTkFont(size=10, weight="bold")
+            text_color="#FFFFFF", font=ctk.CTkFont(size=10, weight="bold"), cursor="hand2"
         )
         self.size_label.pack(side="right", padx=5)
         self.size_label.bind("<Button-1>", lambda e: self._on_click())
