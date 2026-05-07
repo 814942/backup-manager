@@ -181,16 +181,16 @@ def delete_backup(backup: BackupEntry) -> None:
         raise FileNotFoundError(f"Backup not found: {backup.path}")
 
     def onerror(func, path_str, exc_info):
-        # Forzar la eliminación de archivos solo lectura
+        # Force deletion of read-only files
         try:
             os.chmod(path_str, stat.S_IWRITE)
             func(path_str)
         except Exception as e:
-            raise PermissionError(f"No se pudo eliminar '{path_str}': {e}") from e
+            raise PermissionError(f"Could not delete '{path_str}': {e}") from e
 
     try:
         shutil.rmtree(path, onerror=onerror)
     except PermissionError as e:
-        raise PermissionError(f"Acceso denegado al eliminar el backup: {path}\n{e}") from e
+        raise PermissionError(f"Access denied while deleting backup: {path}\n{e}") from e
     except Exception as e:
-        raise RuntimeError(f"Error inesperado al eliminar el backup: {path}\n{e}") from e
+        raise RuntimeError(f"Unexpected error while deleting backup: {path}\n{e}") from e
