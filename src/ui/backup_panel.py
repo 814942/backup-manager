@@ -371,10 +371,20 @@ class BackupListItem(ctk.CTkFrame):
         content = ctk.CTkFrame(self.hitbox, fg_color="transparent")
         content.pack(fill="x", padx=10, pady=8)
 
+        def forward_event_to_hitbox(event, handler):
+            handler(event)
+            return "break"  # Evita que el evento se propague más
+
+        # Bind de click y hover en content y labels, reenviando al hitbox
+        for widget in [content]:
+            widget.bind("<Button-1>", lambda e: self._on_click())
+            widget.bind("<Enter>", lambda e: self._on_hover(True))
+            widget.bind("<Leave>", lambda e: self._on_hover(False))
+
         self.name_label = ctk.CTkLabel(
             content, text=backup.name, anchor="w",
             font=ctk.CTkFont(size=11, weight="bold"),
-            cursor="hand2", text_color="#ffffff"
+            text_color="#ffffff"
         )
         self.name_label.pack(side="left", padx=5)
         self.name_label.bind("<Button-1>", lambda e: self._on_click())
@@ -386,7 +396,7 @@ class BackupListItem(ctk.CTkFrame):
 
         self.size_label = ctk.CTkLabel(
             content, text=f"{size_str} | {date_str}", anchor="e",
-            text_color="#FFFFFF", font=ctk.CTkFont(size=10, weight="bold"), cursor="hand2"
+            text_color="#FFFFFF", font=ctk.CTkFont(size=10, weight="bold")
         )
         self.size_label.pack(side="right", padx=5)
         self.size_label.bind("<Button-1>", lambda e: self._on_click())

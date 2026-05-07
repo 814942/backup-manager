@@ -129,8 +129,15 @@ def do_restore(
                 shutil.copy2(item, dest_item)
 
     items = [i for i in backup_path.iterdir()]
+    # Si el backup contiene una sola carpeta (el save), copiar esa carpeta dentro del destino
     if len(items) == 1 and items[0].is_dir():
-        copy_contents(items[0], source)
+        dest = source / items[0].name
+        if dest.exists():
+            if dest.is_dir():
+                shutil.rmtree(dest)
+            else:
+                dest.unlink()
+        shutil.copytree(items[0], dest)
     else:
         copy_contents(backup_path, source)
 
@@ -159,7 +166,23 @@ def list_backups(game: Game) -> list[BackupEntry]:
 # FIX ISS-03: Check path exists before deleting to avoid FileNotFoundError on double-click.
 def delete_backup(backup: BackupEntry) -> None:
     """Delete backup folder from disk."""
+    import os
+    import stat
     path = Path(backup.path)
     if not path.exists():
         raise FileNotFoundError(f"Backup not found: {backup.path}")
-    shutil.rmtree(path)
+
+    def onerror(func, path_str, exc_info):
+        # Forzar la eliminación de archivos solo lectura
+        try:
+            os.chmod(path_str, stat.S_IWRITE)
+            func(path_str)
+        except Exception as e:
+            raise PermissionError(f"No se pudo eliminar '{path_str}': {e}") from e
+
+    try:
+        shutil.rmtree(path, onerror=onerror)
+    except PermissionError as e:
+        raise PermissionError(f"Acceso denegado al eliminar el backup: {path}\n{e}") from e
+    except Exception as e:
+        raise RuntimeError(f"Error inesperado al eliminar el backup: {path}\n{e}") from e
