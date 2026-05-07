@@ -71,13 +71,13 @@ class AlertDialog(ctk.CTkToplevel):
     def __init__(self, parent, title: str, message: str):
         super().__init__(parent)
         self.title(title)
-        self.geometry("400x150")
+        self.geometry("520x220")  # Larger for long error messages
         self.resizable(False, False)
 
         self.transient(parent)
         self.grab_set()
 
-        ctk.CTkLabel(self, text=message, wraplength=350).pack(pady=20)
+        ctk.CTkLabel(self, text=message, wraplength=480, justify="left").pack(pady=20, padx=10)
         ctk.CTkButton(self, text="OK", command=self.destroy, width=80).pack(pady=10)
 
 

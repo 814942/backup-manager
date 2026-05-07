@@ -129,17 +129,25 @@ def do_restore(
                 shutil.copy2(item, dest_item)
 
     items = [i for i in backup_path.iterdir()]
-    # Si el backup contiene una sola carpeta (el save), copiar esa carpeta dentro del destino
-    if len(items) == 1 and items[0].is_dir():
-        dest = source / items[0].name
-        if dest.exists():
-            if dest.is_dir():
-                shutil.rmtree(dest)
-            else:
-                dest.unlink()
-        shutil.copytree(items[0], dest)
-    else:
-        copy_contents(backup_path, source)
+    try:
+        # Si el backup contiene una sola carpeta (el save), copiar esa carpeta dentro del destino
+        if len(items) == 1 and items[0].is_dir():
+            dest = source / items[0].name
+            if dest.exists():
+                if dest.is_dir():
+                    shutil.rmtree(dest)
+                else:
+                    dest.unlink()
+            shutil.copytree(items[0], dest)
+        else:
+            copy_contents(backup_path, source)
+    except PermissionError as e:
+        raise PermissionError(
+            f"Acceso denegado al restaurar archivos.\n"
+            f"Es posible que OneDrive, antivirus u otro proceso esté usando los archivos o la carpeta.\n"
+            f"Cierre OneDrive, espere a que termine la sincronización, o cierre cualquier programa que use la carpeta y vuelva a intentar.\n\n"
+            f"Detalle: {e}"
+        ) from e
 
     if on_progress:
         on_progress("Restore complete!")
